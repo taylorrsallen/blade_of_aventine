@@ -1,0 +1,110 @@
+; Engine configuration file.
+; It's best edited using the editor UI and not directly,
+; since the parameters that go here are not all obvious.
+;
+; Format:
+;   [section] ; section goes between []
+;   param=value ; assign values to parameters
+
+config_version=5
+
+[application]
+
+config/name="Blade of Aventine"
+run/main_scene="res://systems/managers/main.scn"
+config/features=PackedStringArray("4.3", "GL Compatibility")
+config/icon="res://icon.svg"
+
+[autoload]
+
+SoundManager="*res://systems/managers/sound_manager/sound_manager.gd"
+
+[display]
+
+window/size/always_on_top=true
+
+[file_customization]
+
+folder_colors={
+"res://assets/": "yellow",
+"res://resources/": "blue",
+"res://scenes/": "purple",
+"res://systems/": "red"
+}
+
+[input]
+
+move_left_0={
+"deadzone": 0.5,
+"events": []
+}
+move_right_0={
+"deadzone": 0.5,
+"events": []
+}
+move_forward_0={
+"deadzone": 0.5,
+"events": []
+}
+move_back_0={
+"deadzone": 0.5,
+"events": []
+}
+interact_0={
+"deadzone": 0.5,
+"events": []
+}
+item_0={
+"deadzone": 0.5,
+"events": []
+}
+primary_0={
+"deadzone": 0.5,
+"events": []
+}
+secondary_0={
+"deadzone": 0.5,
+"events": []
+}
+ability_0_0={
+"deadzone": 0.5,
+"events": []
+}
+ability_1_0={
+"deadzone": 0.5,
+"events": []
+}
+ability_2_0={
+"deadzone": 0.5,
+"events": []
+}
+ability_3_0={
+"deadzone": 0.5,
+"events": []
+}
+ability_4_0={
+"deadzone": 0.5,
+"events": []
+}
+ability_5_0={
+"deadzone": 0.5,
+"events": []
+}
+ability_6_0={
+"deadzone": 0.5,
+"events": []
+}
+start_0={
+"deadzone": 0.5,
+"events": []
+}
+sprint_0={
+"deadzone": 0.5,
+"events": []
+}
+
+[rendering]
+
+renderer/rendering_method="gl_compatibility"
+renderer/rendering_method.mobile="gl_compatibility"
+textures/lossless_compression/force_png=true
