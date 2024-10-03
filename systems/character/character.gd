@@ -1,17 +1,15 @@
-extends RigidBody3D
-class_name Character
+class_name Character extends RigidBody3D
 
-# ////////////////////////////////////////////////////////////////////////////////////////////////
+# (({[%%%(({[=======================================================================================================================]}))%%%]}))
 signal jumped()
 signal landed(force: float)
 signal killed()
 
-# ////////////////////////////////////////////////////////////////////////////////////////////////
+# (({[%%%(({[=======================================================================================================================]}))%%%]}))
 enum CharacterFlag {
 	GROUNDED,
 	WALK,
 	SPRINT,
-	CROUCH,
 	TUMBLING,
 	NOCLIP,
 }
@@ -23,11 +21,10 @@ enum CharacterAction {
 	SECONDARY_ALT,
 }
 
-# ////////////////////////////////////////////////////////////////////////////////////////////////
+# (({[%%%(({[=======================================================================================================================]}))%%%]}))
 ## COMPOSITION
 #@onready var character_actions: CharacterActions = $CharacterActions
 @onready var nav_collider: CollisionShape3D = $NavCollider
-@onready var navigation_agent_3d: NavigationAgent3D = $NavigationAgent3D
 
 @onready var body_container: Node3D = $BodyContainer
 @onready var body_center_pivot: Node3D = $BodyContainer/BodyCenterPivot
@@ -42,7 +39,6 @@ enum CharacterAction {
 @export var body_data: CharacterBodyData: set = _set_character_body_data
 @export var body_stats_data: CharacterBodyStatsData
 #@export var attribute_data: CharacterAttributeData
-#@export var equipment_data: CharacterEquipmentData
 
 ## FLAGS
 var flags: int
@@ -65,7 +61,6 @@ var desired_facing: Vector3
 var move_direction: Vector3
 @export var move_direction_lerp_speed: float = 10.0
 
-@export var crouch_speed: float = 4.5
 @export var walk_speed: float = 3.0
 @export var jog_speed: float = 5.0
 @export var sprint_speed: float = 8.0
@@ -77,28 +72,25 @@ var last_velocity: Vector3
 
 var gravity = ProjectSettings.get_setting("physics/3d/default_gravity")
 
-var sprint_cd_timer_max: float = 2.0
-var sprint_cd_timer: float
-
 ## VEHICLE
 @export var vehicle: Node3D
-
-## INTERACTION
-var interact_focus: Node3D
-
-## EQUIPMENT
-#@onready var equip_slot_r_hand: EquipSlot = $EquipSlot_RHand
 
 ## COLLISION
 var default_collision_mask: int
 
-# ////////////////////////////////////////////////////////////////////////////////////////////////
+## GRAB
+var grabbed_entity: Interactable
+
+## AI INTERACTION
+@export var team: int
+
+# (({[%%%(({[=======================================================================================================================]}))%%%]}))
 func is_flag_on(flag: CharacterFlag) -> bool: return Util.is_flag_on(flags, flag)
 func set_flag_on(flag: CharacterFlag) -> void: flags = Util.set_flag_on(flags, flag)
 func set_flag_off(flag: CharacterFlag) -> void: flags = Util.set_flag_off(flags, flag)
 func set_flag(flag: CharacterFlag, active: bool) -> void: flags = Util.set_flag(flags, flag, active)
 
-# ////////////////////////////////////////////////////////////////////////////////////////////////
+# (({[%%%(({[=======================================================================================================================]}))%%%]}))
 #func _set_stat_data(_stat_data: CharacterStatData) -> void:
 	#if stat_data: stat_data.killed.disconnect(_on_killed)
 	#stat_data = _stat_data
@@ -126,97 +118,27 @@ func get_eye_target() -> Node3D:
 func get_body_center_pos() -> Vector3:
 	return body_center_pivot.global_position
 
-# ////////////////////////////////////////////////////////////////////////////////////////////////
+# (({[%%%(({[=======================================================================================================================]}))%%%]}))
 func _ready() -> void:
 	_set_character_body_data(body_data)
 	default_collision_mask = collision_mask
 	
 	#character_actions.init(body.animation_tree)
-	#stat_data = CharacterStatData.new()
 
 func _physics_process(delta: float) -> void:
-	#if is_flag_on(CharacterFlag.SPRINT) && is_flag_on(CharacterFlag.GROUNDED) && world_move_input != Vector3.ZERO:
-		#stat_data.sub_stamina(55.0 * delta)
-		#if stat_data.stamina <= 0.0: set_sprinting(false)
-	#
-	#stat_data.update(delta)
-	
 	if !vehicle:
 		_update_movement(delta)
 	else:
 		pass # Send inputs to vehicle, just like how Controller sends input to Character
 	
-	#_update_interactables()
-	
-	#if is_instance_valid(body) && body is BodyHumanMale:
-		#body.animation_tree["parameters/base_idle_look/blend_position"] = look_scalar
-		#body.animation_tree["parameters/sword_stab_look/blend_position"] = look_scalar
-		#body.animation_tree["parameters/sword_slash_look/blend_position"] = look_scalar
+	if grabbed_entity: _update_grabbed_entity()
 
-# ////////////////////////////////////////////////////////////////////////////////////////////////
-func use_action(action: CharacterAction) -> void:
-	match action:
-		CharacterAction.PRIMARY: use_primary()
-		CharacterAction.SECONDARY: use_secondary()
-
+# (({[%%%(({[=======================================================================================================================]}))%%%]}))
 func use_primary() -> void:
 	pass
-	#var action: CharacterStandardAction = SWORD_STAB.duplicate()
-	#action.character = self
-	#character_actions.queue_standard_action(action)
-	
-	#if is_on_floor():
-		#if world_move_input != Vector3.ZERO:
-			#if is_flag_on(CharacterFlag.SPRINT):
-				#use_r_dash_attack()
-			#else:
-				#use_r_forward_attack()
-		#else:
-			#use_r_standard_attack()
-	#else:
-		#use_r_plunge_attack()wwwww
 
 func use_secondary() -> void:
 	pass
-	
-	#if is_magic_weapon: do_magic_stuff()
-	#if is_flag_on(CharacterFlag.GROUNDED):
-		#if world_move_input != Vector3.ZERO:
-			#if is_flag_on(CharacterFlag.SPRINT):
-				#use_l_dash_attack()
-			#else:
-				#use_l_forward_attack()
-		#else:
-			#use_l_standard_attack()
-	#else:
-		#use_l_plunge_attack()
-
-func use_r_dash_attack() -> void:
-	print("R D.ATK")
-	#if stat_data.stamina > 0.0:
-		#stat_data.sub_stamina(15.0)
-		#stat_data.reset_stamina_regen_cd()
-
-func use_r_forward_attack() -> void:
-	print("R F.ATK")
-
-func use_r_standard_attack() -> void:
-	print("R S.ATK")
-
-func use_r_plunge_attack() -> void:
-	print("R P.ATK")
-
-func use_l_dash_attack() -> void:
-	print("L D.ATK")
-
-func use_l_forward_attack() -> void:
-	print("L F.ATK")
-
-func use_l_standard_attack() -> void:
-	print("L S.ATK")
-
-func use_l_plunge_attack() -> void:
-	print("L P.ATK")
 
 func use_interact() -> void:
 	print("INTERACT")
@@ -224,15 +146,24 @@ func use_interact() -> void:
 func use_item() -> void:
 	print("ITEM")
 
-func use_roll() -> void:
-	print("ROLL")
+# (({[%%%(({[=======================================================================================================================]}))%%%]}))
+func grab_entity(entity: Interactable) -> void:
+	if grabbed_entity: drop_grabbed_entity()
+	entity.disable_collision()
+	grabbed_entity = entity
 
-# ////////////////////////////////////////////////////////////////////////////////////////////////
-func set_crouching(active: bool) -> void: set_flag(CharacterFlag.CROUCH, active)
-func set_sprinting(active: bool) -> void:
-	set_flag(CharacterFlag.SPRINT, active)
-	
-	#if body is BodyHumanMale: body.set_sprinting(active)
+func drop_grabbed_entity() -> Interactable:
+	var entity: Interactable = grabbed_entity
+	grabbed_entity.enable_collision()
+	grabbed_entity = null
+	return entity
+
+func _update_grabbed_entity() -> void:
+	grabbed_entity.global_position = global_position + Vector3.UP * body_data.height
+	grabbed_entity.global_rotation = body_center_pivot.global_rotation
+
+# (({[%%%(({[=======================================================================================================================]}))%%%]}))
+func set_sprinting(active: bool) -> void: set_flag(CharacterFlag.SPRINT, active)
 
 func toggle_sprinting() -> void:
 	if is_flag_on(CharacterFlag.SPRINT):
@@ -248,7 +179,7 @@ func toggle_no_clip() -> void:
 		set_flag_on(CharacterFlag.NOCLIP)
 		collision_mask = 0
 
-# ////////////////////////////////////////////////////////////////////////////////////////////////
+# (({[%%%(({[=======================================================================================================================]}))%%%]}))
 func set_yaw_look_basis(_basis: Basis) -> void:
 	body.set_yaw_look_basis(_basis)
 
@@ -280,7 +211,7 @@ func look_forward() -> void:
 	set_yaw_look_basis(look_transform.basis)
 	set_pitch_look_basis(Basis.IDENTITY)
 
-# ////////////////////////////////////////////////////////////////////////////////////////////////
+# (({[%%%(({[=======================================================================================================================]}))%%%]}))
 func face_direction(direction: Vector3, delta: float) -> void:
 	if body.can_walk():
 		Util.rotate_yaw_to_target(delta * move_direction_lerp_speed, body_container, body_container.global_position + direction)
@@ -288,76 +219,27 @@ func face_direction(direction: Vector3, delta: float) -> void:
 		nav_collider.basis = Basis.IDENTITY
 
 func _update_movement(delta: float) -> void:
-	if is_flag_on(CharacterFlag.CROUCH):
-		current_speed = crouch_speed
-	elif is_flag_on(CharacterFlag.WALK):
+	if is_flag_on(CharacterFlag.WALK):
 		current_speed = walk_speed
 	elif is_flag_on(CharacterFlag.SPRINT):
 		current_speed = sprint_speed
 	else:
 		current_speed = jog_speed
 	
-	if is_flag_on(CharacterFlag.NOCLIP):
-		_update_movement_noclip(delta)
-	else:
-		_update_movement_grounded(delta)
-
-func _update_movement_noclip(delta: float) -> void:
-	if is_flag_on(CharacterFlag.CROUCH): world_move_input.y = -1.0
-	move_direction = lerp(move_direction, world_move_input.normalized(), delta * move_direction_lerp_speed)
-	if world_move_input == Vector3.ZERO: set_flag_off(CharacterFlag.SPRINT)
-	
-	var noclip_speed: float = sprint_speed if !is_flag_on(CharacterFlag.SPRINT) else sprint_speed * 16.0
-	global_position += move_direction * noclip_speed * delta
-
-func _update_movement_underwater(delta: float) -> void:
-	## Look left/right = roll
-	## Look up/down = pitch
-	## Move left/right = yaw
-	## Move up/down = velocity
-	
-	#stat_data.stamina_regen_paused = false
-	move_direction = lerp(move_direction, -look_direction * move_input.z, delta * move_direction_lerp_speed)
-	
-	if move_direction != Vector3.ZERO:
-		linear_velocity.x = move_direction.x * current_speed
-		linear_velocity.y = move_direction.y * current_speed
-		linear_velocity.z = move_direction.z * current_speed
-		body.set_walking(true)
-	else:
-		linear_velocity.x = move_toward(linear_velocity.x, 0.0, current_speed)
-		linear_velocity.y = move_toward(linear_velocity.y, 0.0, current_speed)
-		linear_velocity.z = move_toward(linear_velocity.z, 0.0, current_speed)
-		body.set_walking(false)
-	
-	if world_move_input == Vector3.ZERO:
-		set_flag_off(CharacterFlag.SPRINT)
-		body.set_walking(false)
-	
-	body_center_pivot.basis = body_center_pivot.basis.orthonormalized().slerp(look_basis.orthonormalized(), 0.1).orthonormalized()
-	nav_collider.basis = body_center_pivot.basis
-	body_container.basis = Basis.IDENTITY
-	
-	last_velocity = linear_velocity
-	#move_and_slide()
+	_update_movement_grounded(delta)
 
 func _update_movement_grounded(delta: float) -> void:
 	#_update_upright_rotation()
 	#_update_upright_force()
 	_update_ride_force()
 	
-	if is_flag_on(CharacterFlag.GROUNDED) && last_velocity.y < -1.0:
-		landed.emit(-last_velocity.y)
-		#stat_data.stamina_regen_paused = false
+	if is_flag_on(CharacterFlag.GROUNDED) && last_velocity.y < -1.0: landed.emit(-last_velocity.y)
 	
 	if !is_flag_on(CharacterFlag.GROUNDED):
 		linear_velocity.y -= gravity * delta
 	elif world_move_input.y > 0.0 && body.can_walk():
-		#if stat_data.stamina > 0.0:
 		linear_velocity.y = jump_velocity
 		jumped.emit()
-			#stat_data.sub_stamina(25.0)
-			#stat_data.stamina_regen_paused = true
 	
 	if is_flag_on(CharacterFlag.GROUNDED):
 		if body.can_walk():
@@ -379,7 +261,6 @@ func _update_movement_grounded(delta: float) -> void:
 		body.set_walking(false)
 	
 	last_velocity = linear_velocity
-	#move_and_slide()
 
 func _update_upright_rotation() -> void:
 	var look_transform: Transform3D = Transform3D.IDENTITY
@@ -439,11 +320,14 @@ func _update_ride_force() -> void:
 		set_flag_off(CharacterFlag.GROUNDED)
 		constant_force = Vector3.ZERO
 
-# ////////////////////////////////////////////////////////////////////////////////////////////////
-#func _on_humanoid_male_model_damaged(damage_data: DamageData, _area_id: int) -> void:
-	#stat_data.apply_regenerateable_damage(damage_data.damage_strength)
-
+# (({[%%%(({[=======================================================================================================================]}))%%%]}))
 func _on_killed() -> void:
-	print("%s died!" % name)
 	killed.emit()
 	queue_free()
+
+var temp_hp: float = 3.0
+func _on_damageable_area_3d_damaged(damage_data: DamageData, area_id: int) -> void:
+	print(temp_hp)
+	temp_hp -= damage_data.damage_strength
+	if temp_hp < 0.0:
+		_on_killed()

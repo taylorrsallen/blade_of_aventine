@@ -1,5 +1,6 @@
 class_name BodyUnwashedPeasant extends CharacterBody
 
+# (({[%%%(({[=======================================================================================================================]}))%%%]}))
 var current_movement_step: int = 0
 @export var walk_step_time: float = 0.1
 @export var jog_step_time: float = 0.1
@@ -8,11 +9,13 @@ var current_movement_step_time: float = 0.0
 
 var walking_target: float = 1.0
 
+# (({[%%%(({[=======================================================================================================================]}))%%%]}))
 func _physics_process(delta: float) -> void:
 	animation_tree["parameters/base_movement/blend_amount"] = lerpf(animation_tree["parameters/base_movement/blend_amount"], walking_target, delta * 5.0)
 	
 	advance_movement_step(delta)
 
+# (({[%%%(({[=======================================================================================================================]}))%%%]}))
 func set_walking(active: bool) -> void:
 	if active:
 		walking_target = 1.0
@@ -21,6 +24,7 @@ func set_walking(active: bool) -> void:
 
 const ANIMATION_FRAMES: int = 8
 
+# (({[%%%(({[=======================================================================================================================]}))%%%]}))
 func advance_movement_step(value: float) -> void:
 	if walking_target < 0.05: return
 	

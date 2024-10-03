@@ -46,7 +46,7 @@ func _physics_process(delta: float) -> void:
 	var flow_vector: Vector2 = Util.main.level.flow_field[level_local_coord.y * Util.main.level.level_dim + level_local_coord.x]
 	character.world_move_input = Vector3(flow_vector.x, 0.0, flow_vector.y)
 	character.face_direction(character.world_move_input, delta)
-	if level_local_coord.distance_to(Util.main.level.target_local_coord) < 2.0: character._on_killed()
+	#if level_local_coord.distance_to(Util.main.level.target_local_coord) < 2.0: character._on_killed()
 	
 	#if !is_instance_valid(Util.player): return
 	#if !is_instance_valid(Util.player.character): return

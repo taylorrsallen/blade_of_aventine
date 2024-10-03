@@ -7,7 +7,7 @@ enum DamageType {
 }
 
 enum DamageMaterial {
-	STEEL,
+	METAL,
 }
 
 @export var damage_type: DamageType

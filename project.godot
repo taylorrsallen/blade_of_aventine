@@ -18,6 +18,7 @@ config/icon="res://icon.svg"
 [autoload]
 
 SoundManager="*res://systems/managers/sound_manager/sound_manager.gd"
+AreaQueryManager="*res://systems/managers/area_query_manager.gd"
 
 [display]
 
@@ -102,9 +103,30 @@ sprint_0={
 "deadzone": 0.5,
 "events": []
 }
+zoom_in_0={
+"deadzone": 0.5,
+"events": [Object(InputEventMouseButton,"resource_local_to_scene":false,"resource_name":"","device":-1,"window_id":0,"alt_pressed":false,"shift_pressed":false,"ctrl_pressed":false,"meta_pressed":false,"button_mask":8,"position":Vector2(181, 12),"global_position":Vector2(190, 58),"factor":1.0,"button_index":4,"canceled":false,"pressed":true,"double_click":false,"script":null)
+]
+}
+zoom_out_0={
+"deadzone": 0.5,
+"events": [Object(InputEventMouseButton,"resource_local_to_scene":false,"resource_name":"","device":-1,"window_id":0,"alt_pressed":false,"shift_pressed":false,"ctrl_pressed":false,"meta_pressed":false,"button_mask":16,"position":Vector2(144, 28),"global_position":Vector2(153, 74),"factor":1.0,"button_index":5,"canceled":false,"pressed":true,"double_click":false,"script":null)
+]
+}
+
+[layer_names]
+
+3d_physics/layer_1="TERRAIN"
+3d_physics/layer_2="CHARACTERS"
+3d_physics/layer_3="CHARACTER_DAMAGE"
+3d_physics/layer_10="INTERACTABLES"
 
 [rendering]
 
 renderer/rendering_method="gl_compatibility"
 renderer/rendering_method.mobile="gl_compatibility"
 textures/lossless_compression/force_png=true
+anti_aliasing/screen_space_roughness_limiter/enabled=false
+scaling_3d/scale=0.5
+environment/glow/upscale_mode=0
+environment/screen_space_reflection/roughness_quality=0

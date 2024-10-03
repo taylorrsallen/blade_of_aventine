@@ -26,4 +26,5 @@ func spawn_enemy() -> void:
 	Util.main.add_child(ai_controller)
 	ai_controller.character = CHARACTER.instantiate()
 	ai_controller.character.position = global_position
+	ai_controller.character.jog_speed = 1.5
 	ai_controller.add_child(ai_controller.character)

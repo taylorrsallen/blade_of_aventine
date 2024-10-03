@@ -1,0 +1,1 @@
+class_name InteractableCollider extends StaticBody3D

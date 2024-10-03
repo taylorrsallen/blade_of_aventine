@@ -47,10 +47,14 @@ var previous_cursor_pos: Vector2
 @export var cursor_world_entity: Node3D
 @export var cursor_world_pos: Vector3
 
-
 var focus_world_entity: Node3D
 var focus_world_pos: Vector3
 var can_interact: bool
+
+@onready var selection_cursor: Node3D = $SelectionCursor
+@onready var aventine_highlighter: Node3D = $aventine_highlighter
+var focused_interactable_entity: Interactable
+var selection_position: Vector3
 
 ## VIEW
 @onready var camera_view_layer: CanvasLayer = $CameraViewLayer
@@ -88,12 +92,39 @@ func _physics_process(delta: float) -> void:
 	if !get_window().has_focus():
 		set_cursor_visible()
 	else:
-		set_cursor_captured()
+		set_cursor_visible()
+		#set_cursor_captured()
 	
 	if is_instance_valid(character):
-		var level_local_coord: Vector2 = Vector2(character.global_position.x + Util.main.level.level_dim * 0.5, character.global_position.z + Util.main.level.level_dim * 0.5).floor()
-		var flow_vector: Vector2 = Util.main.level.flow_field[level_local_coord.y * Util.main.level.level_dim + level_local_coord.x]
-		DebugDraw3D.draw_arrow(character.global_position, character.global_position + Vector3(flow_vector.x, 0.0, flow_vector.y), Color.RED, 0.5, false, delta)
+		if Input.is_action_just_released("zoom_in_0"):
+			camera_rig.zoom = clampf(camera_rig.zoom - 0.5, 0.5, 7.0)
+		elif Input.is_action_just_released("zoom_out_0"):
+			camera_rig.zoom = clampf(camera_rig.zoom + 0.5, 0.5, 7.0)
+		
+		selection_position = (character.global_position + camera_rig.get_yaw_forward()).floor()
+		selection_position.y = 0.0
+		
+		if is_instance_valid(character.grabbed_entity):
+			if get_interactable_from_global_coord(selection_position):
+				selection_cursor.hide()
+				aventine_highlighter.show()
+				aventine_highlighter.global_position = selection_position + Vector3(0.5, 0.0, 0.5)
+			else:
+				aventine_highlighter.hide()
+				selection_cursor.show()
+				selection_cursor.position = selection_position + Vector3(0.5, 0.0, 0.5)
+		else:
+			selection_cursor.hide()
+			if is_instance_valid(focused_interactable_entity):
+				aventine_highlighter.show()
+				aventine_highlighter.global_position = focused_interactable_entity.global_position
+			else:
+				aventine_highlighter.hide()
+		
+		#DebugDraw3D.draw_aabb(AABB(selection_position, Vector3.ONE), Color.ORANGE, delta)
+		#DebugDraw3D.draw_line(selection_position, selection_position + Vector3.UP * 5.0, Color.ORANGE, 0.016)
+		
+		AreaQueryManager.request_area_query(self, character.global_position, 1.0, 512)
 		
 		#gui_hud.show()
 		
@@ -142,6 +173,22 @@ func remove() -> void:
 	if local_id == 0: return
 
 # ////////////////////////////////////////////////////////////////////////////////////////////////
+func update_area_query(results: Array[PhysicsBody3D]) -> void:
+	var interactables: Array[Interactable] = []
+	for result in results:
+		if result is InteractableCollider:
+			interactables.append(result.get_parent())
+	
+	focused_interactable_entity = null
+	var closest_distance: float = 100.0
+	for interactable in interactables:
+		#DebugDraw3D.draw_line(interactable.global_position, interactable.global_position + Vector3.UP * 5.0, Color.RED, 0.016)
+		var distance: float = character.global_position.distance_to(interactable.global_position)
+		if distance < closest_distance:
+			focused_interactable_entity = interactable
+			closest_distance = distance
+
+# ////////////////////////////////////////////////////////////////////////////////////////////////
 func _update_hud() -> void:
 	pass
 	#gui_hud.health_bar.value = character.stat_data.health
@@ -158,7 +205,30 @@ func _update_character_input(_delta: float) -> void:
 	character.look_scalar = camera_rig.get_look_up_down_scalar()
 	
 	if !is_flag_on(PlayerControllerFlag.CURSOR_VISIBLE):
-		if Input.is_action_just_pressed("primary_" + str(local_id)): character.use_primary()
+		if Input.is_action_just_pressed("primary_" + str(local_id)):
+			if !character.grabbed_entity:
+				if focused_interactable_entity:
+					if focused_interactable_entity is BlockPile:
+						character.grab_entity(focused_interactable_entity.take_block())
+					elif focused_interactable_entity is TowerBase:
+						if focused_interactable_entity.built:
+							character.grab_entity(focused_interactable_entity)
+					else:
+						character.grab_entity(focused_interactable_entity)
+			else:
+				var selection_interactable: Interactable = get_interactable_from_global_coord(selection_position)
+				if selection_interactable:
+					if selection_interactable is BlockPile && character.grabbed_entity is BlockPile:
+						var grabbed_block_pile: BlockPile = character.drop_grabbed_entity()
+						selection_interactable.add_block_pile(grabbed_block_pile)
+				else:
+					var entity: Interactable = character.drop_grabbed_entity()
+					entity.global_position = selection_position + Vector3(0.5, 0.0, 0.5)
+				#print("Terrain: %s" % Util.main.level.get_terrain_id_at_global_coord(selection_position))
+				
+			
+			character.use_primary()
+		
 		if Input.is_action_just_pressed("secondary_" + str(local_id)): character.use_secondary()
 		#if Input.is_action_just_pressed("item_" + str(local_id)): character.use_item()
 		#if Input.is_action_just_pressed("interact_" + str(local_id)):
@@ -172,6 +242,11 @@ func _update_character_input(_delta: float) -> void:
 		camera_rig.fov_mod = (character.current_speed - character.jog_speed) * 1.5
 	else:
 		camera_rig.fov_mod = 0.0
+
+func get_interactable_from_global_coord(global_coord: Vector3) -> Interactable:
+	var entities_in_selection: Array[PhysicsBody3D] = AreaQueryManager.query_area(global_coord + Vector3(0.5, 0.0, 0.5), 0.1, 512)
+	if !entities_in_selection.is_empty(): return entities_in_selection[0].get_parent()
+	return null
 
 func _update_movement_input() -> void:
 	desired_facing = camera_rig.get_yaw_forward()
@@ -241,35 +316,12 @@ func respawn_character() -> void:
 	const CHARACTER_SCN: PackedScene = preload("res://systems/character/character.scn")
 	character = CHARACTER_SCN.instantiate()
 	
-	character.position = Util.main.spawn_point	
+	character.position = Util.main.spawn_point
+	character.team = 1
 	
 	add_child(character)
 	_init_camera_rig()
 	set_cursor_captured()
-
-func _on_character_water_entered() -> void:
-	camera_rig.control_mode = CameraRig.ControlMode.SWIMMING
-
-func _on_character_water_exited() -> void:
-	camera_rig.control_mode = CameraRig.ControlMode.STANDARD
-
-#func set_character(_character: Character) -> void:
-	#character = _character
-	#_init_character()
-#
-#func _init_character() -> void:
-	#if camera_rig: camera_rig.anchor_node = character
-#
-#func _on_character_spawned_on_peer(peer_id: int, _character: Character) -> void:
-	#if peer_id != get_multiplayer_authority(): return
-	#_character.try_assign_to_player(get_multiplayer_authority(), local_id)
-	#if _character.spawned_on_peer.is_connected(_on_character_spawned_on_peer): _character.spawned_on_peer.disconnect(_on_character_spawned_on_peer)
-
-# ////////////////////////////////////////////////////////////////////////////////////////////////
-# INVENTORY
-#func open_inventory(container: InventoryContainer) -> void:
-	#set_cursor_visible()
-	#gui_3d_view.open_inventory(container)
 
 # ////////////////////////////////////////////////////////////////////////////////////////////////
 # GAME START

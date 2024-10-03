@@ -1,14 +1,24 @@
 class_name Level extends Node3D
 
-const ENEMY_SPAWNER: PackedScene = preload("res://systems/level/enemy_spawner.scn")
+# (({[%%%(({[=======================================================================================================================]}))%%%]}))
+const ENEMY_SPAWNER: PackedScene = preload("res://systems/level/entities/enemy_spawner.scn")
+const INTERACTABLE: PackedScene = preload("res://systems/level/entities/interactable/interactable.scn")
+const BLOCK_PILE: PackedScene = preload("res://systems/level/entities/interactable/block_pile/block_pile.scn")
+const LEVEL_1 = preload("res://resources/levels/level_1.png")
 
+const TERRAIN_TILE_DATABASE: TerrainTileDatabase = preload("res://resources/terrain_tiles/terrain_tile_database.res")
+const BLOCK_DATABASE: BlockDatabase = preload("res://resources/blocks/block_database.res")
+
+# (({[%%%(({[=======================================================================================================================]}))%%%]}))
 @onready var terrain_grid_map: GridMap = $TerrainGridMap
 
 @export var level_dim: int = 64
+var data: LevelData
 
 @export var entities_r_value_database: Array[int] = [
+	32, # Wood
 	128, # Castle
-	256, # Spawner
+	255, # Spawner
 ]
 
 @export var terrain_g_value_database: Array[int] = [
@@ -25,13 +35,14 @@ var flow_field: PackedVector2Array = PackedVector2Array()
 var target_local_coord: Vector2i
 
 var spawners: Array[EnemySpawner] = []
+var spawn_towers: Array[TowerBase] = []
 
-const LEVEL_1 = preload("res://resources/levels/level_1.png")
+# (({[%%%(({[=======================================================================================================================]}))%%%]}))
+#func _ready() -> void:
+	#load_layout_from_image(LEVEL_1.get_image())
+	#update_flow_field()
 
-func _ready() -> void:
-	load_from_image(LEVEL_1.get_image())
-	update_flow_field()
-
+# (({[%%%(({[=======================================================================================================================]}))%%%]}))
 func update_flow_field() -> void:
 	flow_field.clear()
 	for z in level_dim: for x in level_dim: flow_field.append(Vector2.ZERO)
@@ -55,24 +66,12 @@ func update_flow_field() -> void:
 		if min_index != -1:
 			var min_neighbor_local_coord: Vector2i = Vector2i(min_index % level_dim, min_index / level_dim)
 			flow_field[i] = Vector2(min_neighbor_local_coord - Vector2i(x, z)).normalized()
-	
-	var image: Image = Image.create_empty(level_dim, level_dim, false, Image.FORMAT_RGB8)
-	for z in level_dim: for x in level_dim:
-		var i: int = z * level_dim + x
-		image.set_pixel(x, z, Color(flow_field[i].x, flow_field[i].y, 0.0))
-		
-	#if dijkstra_grid[i] == Util.UINT32_MAX:
-		#image.set_pixel(x, z, Color8(0, 128, 0))
-	#else:
-		#image.set_pixel(x, z, Color8(dijkstra_grid[i], 0, 0))
-	#
-	image.save_png("res://level_path_cost.png")
 
 func _generate_dijkstra_grid() -> Array[int]:
 	var dijkstra_grid: Array[int] = []
 	for z in level_dim: for x in level_dim:
 		var i: int = z * level_dim + x
-		if terrain_tiles[i] == 1:
+		if TERRAIN_TILE_DATABASE.database[terrain_tiles[i]].ground_obstacle:
 			dijkstra_grid.append(Util.INT32_MAX)
 		else:
 			dijkstra_grid.append(-1)
@@ -134,7 +133,13 @@ func _get_all_neighbor_indices(i: int) -> Array[int]:
 		#else:
 			#navigation_grid_map.set_cell_item(global_coord, 4096)
 
-func load_from_image(image: Image) -> void:
+# (({[%%%(({[=======================================================================================================================]}))%%%]}))
+func load_from_data(level_data: LevelData) -> void:
+	data = level_data
+	load_layout_from_image(level_data.layout_image.get_image())
+	update_flow_field()
+
+func load_layout_from_image(image: Image) -> void:
 	terrain_grid_map.clear()
 	terrain_tiles.clear()
 	
@@ -142,28 +147,52 @@ func load_from_image(image: Image) -> void:
 	
 	for z in level_dim: for x in level_dim:
 		var tile_color: Color = image.get_pixel(x, z)
-		var cell_item: int = get_terrain_item_from_color(tile_color)
+		var terrain_tile_id: int = get_terrain_tile_id_from_color(tile_color)
 		var cell_height: int = tile_color.b8
-		var global_coord: Vector3i = Vector3i(x - level_dim * 0.5, cell_height, z - level_dim * 0.5)
+		var global_coord: Vector3i = Vector3i(x - level_dim * 0.5, 0.0, z - level_dim * 0.5)
 		
-		terrain_tiles.append(cell_item)
-		terrain_grid_map.set_cell_item(global_coord, cell_item)
+		terrain_tiles.append(terrain_tile_id)
+		terrain_grid_map.set_cell_item(global_coord, TERRAIN_TILE_DATABASE.database[terrain_tile_id].tile_mesh_id)
 		
 		spawn_entity_from_color(tile_color, Vector2i(x, z))
 	
-	for spawner in spawners: spawner.max = 160 / spawners.size()
+	for spawner in spawners: spawner.max = 100 / spawners.size()
+	for tower in spawn_towers: tower.position_to_protect = Vector3(target_local_coord.x - level_dim * 0.5, 0.0, target_local_coord.y - level_dim * 0.5)
 
-func get_terrain_item_from_color(color: Color) -> int:
-	for i in terrain_g_value_database.size():
-		if color.g8 == terrain_g_value_database[i]: return i
+func get_terrain_tile_id_from_color(color: Color) -> int:
+	for i in TERRAIN_TILE_DATABASE.database.size():
+		if color.g8 == TERRAIN_TILE_DATABASE.database[i].g_value: return i
 	return 0
 
 func spawn_entity_from_color(color: Color, local_coord: Vector2i) -> void:
+	var block_pile_spawn: int = -1
+	var global_coord: Vector3 = Vector3(local_coord.x - level_dim * 0.5, 0.0, local_coord.y - level_dim * 0.5)
 	match color.r8:
-		128:
-			target_local_coord = local_coord
+		32: block_pile_spawn = 0
+		64: block_pile_spawn = 1
+		96: block_pile_spawn = 2
+		128: target_local_coord = local_coord
+		160:
+			var tower: Tower = preload("res://systems/level/entities/interactable/towers/tower.scn").instantiate()
+			tower.position = global_coord + Vector3(0.5, -5.0, 0.5)
+			tower.protect_position = true
+			spawn_towers.append(tower)
+			add_child(tower)
 		255:
 			var spawner: EnemySpawner = ENEMY_SPAWNER.instantiate()
-			spawner.position = Vector3(local_coord.x - level_dim * 0.5, 0.0, local_coord.y - level_dim * 0.5)
+			spawner.position = global_coord
+			spawner.position.y = 1.0
 			spawners.append(spawner)
 			add_child(spawner)
+	
+	if block_pile_spawn != -1:
+		var block_pile: Interactable = BLOCK_PILE.instantiate()
+		block_pile.position = global_coord + Vector3(0.5, 0.0, 0.5)
+		add_child(block_pile)
+		block_pile.add_block(BLOCK_DATABASE.database[block_pile_spawn])
+
+# (({[%%%(({[=======================================================================================================================]}))%%%]}))
+func get_terrain_id_at_global_coord(global_coord: Vector3) -> int:
+	var local_coord: Vector2i = Vector2i(floorf(global_coord.x) + level_dim * 0.5, floorf(global_coord.z) + level_dim * 0.5)
+	var i: int = local_coord.y * level_dim + local_coord.x
+	return terrain_tiles[i]
