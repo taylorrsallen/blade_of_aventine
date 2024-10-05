@@ -67,6 +67,11 @@ Orcus brings Commodus back to life and tasks him with defending the Roman cultur
 
 - Skybox models
 
+- Debuffs
+    - Oiled: slow + bonus fire damage, used up by fire
+    - Fire: damage over time
+    - 
+
 - Towers
     - Arbalest
         - Wood/Bronze/Sinew
@@ -79,8 +84,8 @@ Orcus brings Commodus back to life and tasks him with defending the Roman cultur
         - Wood/Oil
     - Trebuchet (cannon, long range, slow fire, high damage, large AOE)
         - Wood/Wood/Sinew/Sinew/Marble
-    - Magic Missile
-        - Wood/Magic
+    - Magic Missile (Arbalest with longer range & homing arrows)
+        - Wood/Bronze/Sinew/Magic
     - Magic Beam
         - Marble/Magic
     - 
@@ -130,6 +135,16 @@ Orcus brings Commodus back to life and tasks him with defending the Roman cultur
     - Die (from tower friendly fire)
     - Dance (leveling up towers)
 
+- Tower Animations
+    - Fire
+    - Reload
+    - Movement (gears turning, etc.)
+    - Damage
+
+- Tower States
+    - Pristine
+    - Damaged
+
 - Sprites
     - "Build with E" animated sprite
     - Generic button
@@ -145,6 +160,7 @@ Orcus brings Commodus back to life and tasks him with defending the Roman cultur
     - Dust from sprinting
     - Coin get
     - Bread get
+    - Fire
 
 ## TODO NO MORE
 ### 10/04/24
@@ -184,6 +200,7 @@ Orcus brings Commodus back to life and tasks him with defending the Roman cultur
 + Coins can now be used at the shop to buy blocks used for making towers
 + Blocks can also be sold at the shop
 + Shop sells at markup and buys at markdown, amount can change per shop
++ Shop has a shopkeeper that announces prices (but he is invisible right now because I haven't done the art)
 
 ### 10/03/24
 + Peasant
