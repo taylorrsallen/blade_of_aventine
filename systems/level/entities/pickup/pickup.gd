@@ -19,6 +19,9 @@ var suction_target: Node3D
 
 @export var pickup_data: PickupData: set = _set_pickup_data
 
+var time_until_suction: float = 0.2
+var time_until_suction_timer: float
+
 # (({[%%%(({[=======================================================================================================================]}))%%%]}))
 func _set_pickup_data(_pickup_data: PickupData) -> void:
 	pickup_data = _pickup_data
@@ -51,7 +54,8 @@ func _physics_process(delta: float) -> void:
 		if pickup_data.metadata.has("bread"): Util.player.game_resources.bread -= pickup_data.metadata["bread"]
 		queue_free()
 	
-	if is_instance_valid(suction_target):
+	time_until_suction_timer += delta
+	if time_until_suction_timer >= time_until_suction && is_instance_valid(suction_target):
 		suction_speed += delta
 		var target_position: Vector3 = suction_target.global_position + Vector3.UP * 0.5
 		$Body.global_position = $Body.global_position.move_toward(target_position, suction_speed)

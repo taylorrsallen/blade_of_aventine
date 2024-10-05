@@ -56,7 +56,10 @@ var can_interact: bool
 @onready var selection_cursor: Node3D = $SelectionCursor
 @onready var aventine_highlighter: Node3D = $aventine_highlighter
 @onready var craft_billboard: MeshInstance3D = $CraftBillboard
-var focused_interactable_entity: Interactable
+## The thing you are near with nothing in your hands
+var focused_interactable: Interactable: set = _set_focused_interactable
+## The thing you are looking at with something in your hands
+var selection_interactable: Interactable: set = _set_selection_interactable
 var selection_position: Vector3
 
 ## VIEW
@@ -84,6 +87,18 @@ func _set_perspective(_perspective: Perspective) -> void:
 	if perspective == _perspective: return
 	perspective = _perspective
 	if is_instance_valid(camera_rig): _init_camera_rig()
+
+func _set_selection_interactable(_selection_interactable: Interactable) -> void:
+	if _selection_interactable != selection_interactable:
+		if is_instance_valid(selection_interactable): selection_interactable.set_highlighted(false, character, self)
+		if is_instance_valid(_selection_interactable): _selection_interactable.set_highlighted(true, character, self)
+		selection_interactable = _selection_interactable
+
+func _set_focused_interactable(_focused_interactable: Interactable) -> void:
+	if _focused_interactable != focused_interactable:
+		if is_instance_valid(focused_interactable): focused_interactable.set_highlighted(false, character, self)
+		if is_instance_valid(_focused_interactable): _focused_interactable.set_highlighted(true, character, self)
+		focused_interactable = _focused_interactable
 
 # ////////////////////////////////////////////////////////////////////////////////////////////////
 func init() -> void:
@@ -136,34 +151,7 @@ func _physics_process(delta: float) -> void:
 			_update_cursor_pos()
 		
 	if is_instance_valid(character):
-		selection_position = (character.global_position + camera_rig.get_yaw_forward()).floor()
-		selection_position.y = 0.0
-		
-		var show_craft_billboard: bool = false
-		if is_instance_valid(character.grabbed_entity):
-			if get_interactable_from_global_coord(selection_position):
-				selection_cursor.hide()
-				aventine_highlighter.show()
-				aventine_highlighter.global_position = selection_position + Vector3(0.5, 0.0, 0.5)
-			else:
-				aventine_highlighter.hide()
-				selection_cursor.show()
-				selection_cursor.position = selection_position + Vector3(0.5, 0.0, 0.5)
-		else:
-			selection_cursor.hide()
-			if is_instance_valid(focused_interactable_entity):
-				aventine_highlighter.show()
-				aventine_highlighter.global_position = focused_interactable_entity.global_position
-				if focused_interactable_entity is BlockPile && focused_interactable_entity.valid_recipe:
-					show_craft_billboard = true
-					craft_billboard.position = focused_interactable_entity.global_position + Vector3.UP * (focused_interactable_entity.pile_height + 0.5)
-			else:
-				aventine_highlighter.hide()
-		
-		if show_craft_billboard:
-			craft_billboard.show()
-		else:
-			craft_billboard.hide()
+		_update_selection()
 		
 		#DebugDraw3D.draw_aabb(AABB(selection_position, Vector3.ONE), Color.ORANGE, delta)
 		#DebugDraw3D.draw_line(selection_position, selection_position + Vector3.UP * 5.0, Color.ORANGE, 0.016)
@@ -197,6 +185,39 @@ func _physics_process(delta: float) -> void:
 func _unhandled_input(event: InputEvent) -> void:
 	if event is InputEventMouseMotion: look_input = Vector2(-event.relative.x, -event.relative.y)
 
+func _update_selection() -> void:
+	selection_position = (character.global_position + camera_rig.get_yaw_forward()).floor()
+	selection_position.y = 0.0
+	
+	var show_craft_billboard: bool = false
+	var show_highlighter: bool = false
+	var show_selection_cursor: bool = false
+	
+	if is_instance_valid(character.grabbed_entity):
+		selection_interactable = get_interactable_from_global_coord(selection_position)
+		
+		if is_instance_valid(focused_interactable) && focused_interactable is ShopItemDisplay && character.grabbed_entity is BlockPile:
+			show_highlighter = true
+			aventine_highlighter.global_position = focused_interactable.global_position
+		else:
+			if is_instance_valid(selection_interactable):
+				show_highlighter = true
+				aventine_highlighter.global_position = selection_position + Vector3(0.5, 0.0, 0.5)
+			else:
+				show_selection_cursor = true
+				selection_cursor.position = selection_position + Vector3(0.5, 0.0, 0.5)
+	else:
+		if is_instance_valid(focused_interactable):
+			show_highlighter = true
+			aventine_highlighter.global_position = focused_interactable.global_position
+			if focused_interactable is BlockPile && focused_interactable.valid_recipe:
+				show_craft_billboard = true
+				craft_billboard.position = focused_interactable.global_position + Vector3.UP * (focused_interactable.pile_height + 0.5)
+	
+	craft_billboard.visible = show_craft_billboard
+	aventine_highlighter.visible = show_highlighter
+	selection_cursor.visible = show_selection_cursor
+
 # ////////////////////////////////////////////////////////////////////////////////////////////////
 func is_flag_on(flag: PlayerControllerFlag) -> bool: return Util.is_flag_on(flags, flag)
 func set_flag_on(flag: PlayerControllerFlag) -> void: flags = Util.set_flag_on(flags, flag)
@@ -217,14 +238,17 @@ func update_area_query(results: Array[PhysicsBody3D]) -> void:
 		if result is InteractableCollider:
 			interactables.append(result.get_parent())
 	
-	focused_interactable_entity = null
+	## There are one time events to do with highlighting that occur when focused_interactable is set, which is why we use a temp variable here
+	var new_focused_interactable: Interactable = null
 	var closest_distance: float = 100.0
 	for interactable in interactables:
 		#DebugDraw3D.draw_line(interactable.global_position, interactable.global_position + Vector3.UP * 5.0, Color.RED, 0.016)
 		var distance: float = character.global_position.distance_to(interactable.global_position)
 		if distance < closest_distance:
-			focused_interactable_entity = interactable
+			new_focused_interactable = interactable
 			closest_distance = distance
+	
+	focused_interactable = new_focused_interactable
 
 # ////////////////////////////////////////////////////////////////////////////////////////////////
 func _update_hud() -> void:
@@ -244,46 +268,22 @@ func _update_character_input(_delta: float) -> void:
 	character.look_scalar = camera_rig.get_look_up_down_scalar()
 	
 	if !is_flag_on(PlayerControllerFlag.CURSOR_VISIBLE):
-		if Input.is_action_just_pressed("primary_" + str(local_id)):
-			if !character.grabbed_entity:
-				if focused_interactable_entity:
-					if focused_interactable_entity is BlockPile:
-						SoundManager.play_3d_sfx(3, SoundDatabase.SoundType.SFX_FOLEY, character.global_position + Vector3.UP * 0.5)
-						character.grab_entity(focused_interactable_entity.take_block())
-					elif focused_interactable_entity is TowerBase:
-						if focused_interactable_entity.built:
-							SoundManager.play_3d_sfx(3, SoundDatabase.SoundType.SFX_FOLEY, character.global_position + Vector3.UP * 0.5)
-							character.grab_entity(focused_interactable_entity)
-					else:
-						character.grab_entity(focused_interactable_entity)
-			else:
-				var selection_interactable: Interactable = get_interactable_from_global_coord(selection_position)
-				if selection_interactable:
-					if selection_interactable is BlockPile && character.grabbed_entity is BlockPile:
-						var grabbed_block_pile: BlockPile = character.drop_grabbed_entity()
-						selection_interactable.add_block_pile(grabbed_block_pile)
-				else:
-					var entity: Interactable = character.drop_grabbed_entity()
-					entity.global_position = selection_position + Vector3(0.5, 0.0, 0.5)
-				#print("Terrain: %s" % Util.main.level.get_terrain_id_at_global_coord(selection_position))
-				
-			
-			character.use_primary()
+		if Input.is_action_just_pressed("primary_" + str(local_id)): _primary()
 		
 		if Input.is_action_just_pressed("secondary_" + str(local_id)):
 			if !character.grabbed_entity:
-				if focused_interactable_entity:
-					if focused_interactable_entity is TowerBase:
-						if focused_interactable_entity.built:
+				if focused_interactable:
+					if focused_interactable is TowerBase:
+						if focused_interactable.built:
 							var damage_data: DamageData = DamageData.new()
 							damage_data.damage_strength = 1.0
-							focused_interactable_entity.damage(damage_data, character)
+							focused_interactable.damage(damage_data, character)
 		
 		if Input.is_action_just_pressed("interact_" + str(local_id)):
 			if !character.grabbed_entity:
-				if focused_interactable_entity:
-					if focused_interactable_entity is BlockPile:
-						focused_interactable_entity.try_craft()
+				if focused_interactable:
+					if focused_interactable is BlockPile:
+						focused_interactable.try_craft()
 		
 		#if Input.is_action_just_pressed("item_" + str(local_id)): character.use_item()
 	
@@ -294,6 +294,42 @@ func _update_character_input(_delta: float) -> void:
 		camera_rig.fov_mod = (character.current_speed - character.jog_speed) * 1.5
 	else:
 		camera_rig.fov_mod = 0.0
+
+func _primary() -> void:
+	if !is_instance_valid(character.grabbed_entity):
+		if is_instance_valid(focused_interactable):
+			if focused_interactable is BlockPile:
+				SoundManager.play_3d_sfx(3, SoundDatabase.SoundType.SFX_FOLEY, character.global_position + Vector3.UP * 0.5)
+				character.grab_entity(focused_interactable.take_block())
+			elif focused_interactable is TowerBase:
+				if focused_interactable.built:
+					SoundManager.play_3d_sfx(3, SoundDatabase.SoundType.SFX_FOLEY, character.global_position + Vector3.UP * 0.5)
+					character.grab_entity(focused_interactable)
+			elif focused_interactable.liftable:
+				character.grab_entity(focused_interactable)
+			else:
+				focused_interactable.interact(character, self)
+	else:
+		var sold_item: bool = false
+		if is_instance_valid(focused_interactable):
+			if focused_interactable is ShopItemDisplay && character.grabbed_entity is BlockPile:
+				var grabbed_block_pile: BlockPile = character.drop_grabbed_entity()
+				focused_interactable.give_coins_for_block(grabbed_block_pile.blocks[0], character)
+				grabbed_block_pile.queue_free()
+				sold_item = true
+		
+		if !sold_item:
+			if is_instance_valid(selection_interactable):
+				if selection_interactable is BlockPile && character.grabbed_entity is BlockPile:
+					var grabbed_block_pile: BlockPile = character.drop_grabbed_entity()
+					selection_interactable.add_block_pile(grabbed_block_pile)
+			else:
+				var entity: Interactable = character.drop_grabbed_entity()
+				entity.global_position = selection_position + Vector3(0.5, 0.0, 0.5)
+		#print("Terrain: %s" % Util.main.level.get_terrain_id_at_global_coord(selection_position))
+		
+	
+	character.use_primary()
 
 func get_interactable_from_global_coord(global_coord: Vector3) -> Interactable:
 	var entities_in_selection: Array[PhysicsBody3D] = AreaQueryManager.query_area(global_coord + Vector3(0.5, 0.0, 0.5), 0.1, 512)

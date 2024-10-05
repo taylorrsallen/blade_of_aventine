@@ -90,9 +90,11 @@ func _start_new_wave() -> void:
 	print("Starting new wave")
 	for batch in active_wave.batches:
 		if !is_instance_valid(faction_spawners[batch.faction_id]): continue
+		faction_spawners[batch.faction_id].coins_to_spawn = active_wave.coins_in_wave
 		faction_spawners[batch.faction_id].spawn_count = batch.spawn_count
 		faction_spawners[batch.faction_id].spawn_rate = batch.spawn_rate
 		faction_spawners[batch.faction_id].unit_id = batch.unit_id
+		faction_spawners[batch.faction_id].refresh()
 
 # (({[%%%(({[=======================================================================================================================]}))%%%]}))
 func add_ai(faction_id: int, ai: Node) -> void:

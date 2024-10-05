@@ -8,11 +8,6 @@ signal finished_reading()
 @onready var reader: DialogueReader = $DialogueReader
 
 # (({[%%%(({[=======================================================================================================================]}))%%%]}))
-func init() -> void:
-	label_3d = $Label3D
-	reader = $DialogueReader
-
-# (({[%%%(({[=======================================================================================================================]}))%%%]}))
 func _ready() -> void:
 	reader.sound_queue.connect(_on_sound_queue)
 	reader.finished_reading.connect(_on_finished_reading)

@@ -28,15 +28,15 @@ Orcus brings Commodus back to life and tasks him with defending the Roman cultur
     - Fast: Barbarian
     - Flyer: Evil Bird
     - Boss: Knight
+- Scotts
+    - s
+- Vandals
 
 ## TODO
 - HUD
     - Coin count
     - Wave indicator
     - Bread count
-
-- Some kind of resource used for getting blocks
-- Some kind of shop to get blocks?
 
 - Barracks that spawn centurions
 - Horn that when interacted signals all ally units to attack enemy bread
@@ -178,6 +178,12 @@ Orcus brings Commodus back to life and tasks him with defending the Roman cultur
 + Units now attack towers/walls that they walk into, and different towers have different max hp and hp regen rates
 
 + Enemies taking bread from the pile but not being able to pick up fallen bread was making the game far too easy unfortunately... Now they eat a certain amount of bread and die (?) once they are finished eating.
+
+---
+
++ Coins can now be used at the shop to buy blocks used for making towers
++ Blocks can also be sold at the shop
++ Shop sells at markup and buys at markdown, amount can change per shop
 
 ### 10/03/24
 + Peasant

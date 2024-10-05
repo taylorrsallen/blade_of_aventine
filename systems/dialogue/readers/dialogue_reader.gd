@@ -43,6 +43,22 @@ func skip_to_end_of_current_line() -> void:
 func skip_line() -> void:
 	_reset_line_reader()
 
+## This will overwrite any currently being printed line and you won't be able to get it back!
+func print_string(string: String, pause_after_finished: float = -1.0) -> void:
+	started = true
+	finished = false
+	_reset_line_reader()
+	active_line = DialogueLineData.new()
+	active_line.line = string
+	active_line.pause_after_finished = pause_after_finished
+
+func clear() -> void:
+	started = false
+	finished = true
+	_reset_line_reader()
+	active_line = null
+	lines_to_read.clear()
+
 # (({[%%%(({[=======================================================================================================================]}))%%%]}))
 func _try_read_lines(delta: float) -> bool:
 	if !active_line: active_line = lines_to_read.pop_front()
@@ -75,20 +91,20 @@ func _add_char_to_line() -> void:
 	active_text += char
 	
 	if char == ",":
-		char_read_cd_mod = 0.2 * active_line.speed * data.speaker.speed
-		sound_queue.emit(sound_id, sound_type, 0.0, 0.95 * pitch)
+		char_read_cd_mod = 0.1 * active_line.speed * data.speaker.speed
+		sound_queue.emit(sound_id, sound_type, data.speaker.volume_db, 0.95 * pitch)
 	elif char == ".":
 		if active_char + 1 < active_line.line.length() && active_line.line[active_char + 1] == " ":
 			char_read_cd_mod = active_line.speed * data.speaker.speed
-		sound_queue.emit(sound_id, sound_type, 0.0, 0.95 * pitch)
+		sound_queue.emit(sound_id, sound_type, data.speaker.volume_db, 0.95 * pitch)
 	elif char == "!":
 		if active_char + 1 < active_line.line.length() && active_line.line[active_char + 1] == " ":
 			char_read_cd_mod = active_line.speed * data.speaker.speed
-		sound_queue.emit(sound_id, sound_type, 0.0, 1.1 * pitch)
+		sound_queue.emit(sound_id, sound_type, data.speaker.volume_db, 1.1 * pitch)
 	elif char != " ":
-		sound_queue.emit(sound_id, sound_type, 0.0, pitch)
+		sound_queue.emit(sound_id, sound_type, data.speaker.volume_db, pitch)
 	else:
-		sound_queue.emit(sound_id, sound_type, -4.0, pitch)
+		sound_queue.emit(sound_id, sound_type, data.speaker.volume_db - 4.0, pitch)
 
 func _reset_line_reader() -> void:
 	active_line = null

@@ -46,6 +46,8 @@ const PICKUP: PackedScene = preload("res://systems/level/entities/pickup/pickup.
 @export var body_stats_data: CharacterBodyStatsData
 #@export var attribute_data: CharacterAttributeData
 
+var drops_data: DropsData
+
 ## FLAGS
 var flags: int
 
@@ -134,6 +136,8 @@ func _set_character_body_data(_body_data: CharacterBodyData) -> void:
 		random_noises = RANDOM_NOISES.instantiate()
 		random_noises.random_sound_pool = body_data.random_noises_pool
 		add_child(random_noises)
+	
+	drops_data = body_data.drops_data
 
 func get_eye_target() -> Node3D:
 	return body.get_eye_target()
@@ -361,8 +365,8 @@ func _update_ride_force() -> void:
 
 # (({[%%%(({[=======================================================================================================================]}))%%%]}))
 func _on_killed() -> void:
-	if body_data.drops_data:
-		for drop_data in body_data.drops_data.drops:
+	if drops_data:
+		for drop_data in drops_data.drops:
 			for i in drop_data.amount:
 				if drop_data.should_drop():
 					var pickup: Pickup = PICKUP.instantiate()
