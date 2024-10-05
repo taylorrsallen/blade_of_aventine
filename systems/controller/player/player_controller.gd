@@ -24,6 +24,8 @@ const SPLITSCREEN_VIEW_SCN: PackedScene = preload("res://systems/controller/play
 const SHADER_VIEW_SCN: PackedScene = preload("res://systems/controller/player/shader_view.scn")
 const CAMERA_RIG: PackedScene = preload("res://systems/camera/camera_rig.scn")
 
+const START_MENU: PackedScene = preload("res://systems/gui/menus/start_menu.scn")
+
 # ////////////////////////////////////////////////////////////////////////////////////////////////
 ## COMPOSITION
 @onready var multiplayer_synchronizer: MultiplayerSynchronizer = $MultiplayerSynchronizer
@@ -53,6 +55,7 @@ var can_interact: bool
 
 @onready var selection_cursor: Node3D = $SelectionCursor
 @onready var aventine_highlighter: Node3D = $aventine_highlighter
+@onready var craft_billboard: MeshInstance3D = $CraftBillboard
 var focused_interactable_entity: Interactable
 var selection_position: Vector3
 
@@ -63,11 +66,18 @@ var selection_position: Vector3
 @export var shader_view: ShaderView
 @onready var hud_view_layer: CanvasLayer = $HUDViewLayer
 @onready var hud_view: Control = $HUDViewLayer/HUDView
+@onready var menu_view: Control = $HUDViewLayer/MenuView
 
 @export var camera_rig: CameraRig
 
 ## CHARACTER
+@export var body_data: CharacterBodyData
 @export var character: Character
+@export var respawn_cd: float = 5.0
+var respawn_timer: float
+
+## GAME DATA
+@export var game_resources: GameResources
 
 # ////////////////////////////////////////////////////////////////////////////////////////////////
 func _set_perspective(_perspective: Perspective) -> void:
@@ -81,9 +91,15 @@ func init() -> void:
 	
 	spawn_camera_rig()
 	_assign_default_keyboard_controls(0, 0)
-	set_cursor_captured()
 
 func _physics_process(delta: float) -> void:
+	if Util.main.level.started && game_resources.bread == 0:
+		Util.main.level.unload()
+		SoundManager.erase_background_track(SoundManager.BackgroundTrackLayer.MUSIC_0)
+		SoundManager.erase_background_track(SoundManager.BackgroundTrackLayer.MUSIC_1)
+		SoundManager.play_background_track(4, SoundDatabase.SoundType.BGT_MUSIC, SoundManager.BackgroundTrackLayer.MUSIC_0, true, -40.0)
+		SoundManager.fade_background_track(SoundManager.BackgroundTrackLayer.MUSIC_0, 1.0, 31.0, 0.0, false)
+	
 	_update_movement_input()
 	
 	#if Input.is_action_just_pressed("toggle_perspective_" + str(local_id)):
@@ -91,19 +107,39 @@ func _physics_process(delta: float) -> void:
 	
 	if !get_window().has_focus():
 		set_cursor_visible()
+	elif menu_view.get_children().is_empty():
+		set_cursor_captured()
 	else:
 		set_cursor_visible()
-		#set_cursor_captured()
 	
-	if is_instance_valid(character):
+	if Input.is_action_just_pressed("start_0"):
+		if menu_view.get_children().is_empty():
+			menu_view.add_child(START_MENU.instantiate())
+		else:
+			for child in menu_view.get_children():
+				child.go_back()
+	
+	if is_instance_valid(camera_rig):
 		if Input.is_action_just_released("zoom_in_0"):
 			camera_rig.zoom = clampf(camera_rig.zoom - 0.5, 0.5, 7.0)
 		elif Input.is_action_just_released("zoom_out_0"):
 			camera_rig.zoom = clampf(camera_rig.zoom + 0.5, 0.5, 7.0)
 		
+		if !is_flag_on(PlayerControllerFlag.CURSOR_VISIBLE):
+			var cursor_movement: Vector2 = get_viewport().size * 0.5 - get_viewport().get_mouse_position()
+			get_viewport().warp_mouse(get_viewport().size * 0.5)
+			camera_rig.apply_inputs(raw_move_input, cursor_movement, delta)
+			camera_rig.apply_camera_rotation()
+			look_input = Vector2.ZERO
+			_update_focus()
+		else:
+			_update_cursor_pos()
+		
+	if is_instance_valid(character):
 		selection_position = (character.global_position + camera_rig.get_yaw_forward()).floor()
 		selection_position.y = 0.0
 		
+		var show_craft_billboard: bool = false
 		if is_instance_valid(character.grabbed_entity):
 			if get_interactable_from_global_coord(selection_position):
 				selection_cursor.hide()
@@ -118,15 +154,24 @@ func _physics_process(delta: float) -> void:
 			if is_instance_valid(focused_interactable_entity):
 				aventine_highlighter.show()
 				aventine_highlighter.global_position = focused_interactable_entity.global_position
+				if focused_interactable_entity is BlockPile && focused_interactable_entity.valid_recipe:
+					show_craft_billboard = true
+					craft_billboard.position = focused_interactable_entity.global_position + Vector3.UP * (focused_interactable_entity.pile_height + 0.5)
 			else:
 				aventine_highlighter.hide()
+		
+		if show_craft_billboard:
+			craft_billboard.show()
+		else:
+			craft_billboard.hide()
 		
 		#DebugDraw3D.draw_aabb(AABB(selection_position, Vector3.ONE), Color.ORANGE, delta)
 		#DebugDraw3D.draw_line(selection_position, selection_position + Vector3.UP * 5.0, Color.ORANGE, 0.016)
 		
 		AreaQueryManager.request_area_query(self, character.global_position, 1.0, 512)
 		
-		#gui_hud.show()
+		for pickup_body in AreaQueryManager.query_area(character.global_position, 5.0, 8):
+			pickup_body.get_parent().take(character)
 		
 		if is_instance_valid(focus_world_entity) && focus_world_pos.distance_to(character.get_body_center_pos()) < 2.0:
 			can_interact = true
@@ -143,20 +188,11 @@ func _physics_process(delta: float) -> void:
 			character.face_direction(camera_rig.get_yaw_forward(), delta)
 		else:
 			character.face_direction(world_move_input, delta)
-		
-		if !is_flag_on(PlayerControllerFlag.CURSOR_VISIBLE):
-			var cursor_movement: Vector2 = get_viewport().size * 0.5 - get_viewport().get_mouse_position()
-			get_viewport().warp_mouse(get_viewport().size * 0.5)
-			camera_rig.apply_inputs(raw_move_input, cursor_movement, delta)
-			camera_rig.apply_camera_rotation()
-			look_input = Vector2.ZERO
-			_update_focus()
-		else:
-			_update_cursor_pos()
-			#_update_cursor_input()
 	else:
-		pass
-		#gui_hud.hide()
+		respawn_timer += delta
+		if respawn_timer >= respawn_cd:
+			respawn_character()
+			respawn_timer = 0.0
 
 func _unhandled_input(event: InputEvent) -> void:
 	if event is InputEventMouseMotion: look_input = Vector2(-event.relative.x, -event.relative.y)
@@ -174,6 +210,8 @@ func remove() -> void:
 
 # ////////////////////////////////////////////////////////////////////////////////////////////////
 func update_area_query(results: Array[PhysicsBody3D]) -> void:
+	if !is_instance_valid(character): return
+	
 	var interactables: Array[Interactable] = []
 	for result in results:
 		if result is InteractableCollider:
@@ -190,11 +228,12 @@ func update_area_query(results: Array[PhysicsBody3D]) -> void:
 
 # ////////////////////////////////////////////////////////////////////////////////////////////////
 func _update_hud() -> void:
-	pass
-	#gui_hud.health_bar.value = character.stat_data.health
-	#gui_hud.health_bar.value_max = character.stat_data.health_max
-	#gui_hud.stamina_bar.value = max(character.stat_data.stamina, 0.0)
-	#gui_hud.stamina_bar.value_max = character.stat_data.stamina_max
+	if !game_resources: return
+	DebugDraw2D.set_text("Coins: ", game_resources.coins, 0, Color.GOLD)
+	DebugDraw2D.set_text("Bread on Map: ", game_resources.bread, 1, Color.SANDY_BROWN)
+	if Util.main.level.faction_bread_piles.is_empty(): return
+	var bread_pile: BreadPile = Util.main.level.faction_bread_piles[0]
+	if is_instance_valid(bread_pile): DebugDraw2D.set_text("Bread in Pile: ", bread_pile.bread_count, 2, Color.SANDY_BROWN)
 
 func _update_character_input(_delta: float) -> void:
 	character.look_basis = camera_rig.rotation_target.basis
@@ -209,9 +248,11 @@ func _update_character_input(_delta: float) -> void:
 			if !character.grabbed_entity:
 				if focused_interactable_entity:
 					if focused_interactable_entity is BlockPile:
+						SoundManager.play_3d_sfx(3, SoundDatabase.SoundType.SFX_FOLEY, character.global_position + Vector3.UP * 0.5)
 						character.grab_entity(focused_interactable_entity.take_block())
 					elif focused_interactable_entity is TowerBase:
 						if focused_interactable_entity.built:
+							SoundManager.play_3d_sfx(3, SoundDatabase.SoundType.SFX_FOLEY, character.global_position + Vector3.UP * 0.5)
 							character.grab_entity(focused_interactable_entity)
 					else:
 						character.grab_entity(focused_interactable_entity)
@@ -229,11 +270,22 @@ func _update_character_input(_delta: float) -> void:
 			
 			character.use_primary()
 		
-		if Input.is_action_just_pressed("secondary_" + str(local_id)): character.use_secondary()
+		if Input.is_action_just_pressed("secondary_" + str(local_id)):
+			if !character.grabbed_entity:
+				if focused_interactable_entity:
+					if focused_interactable_entity is TowerBase:
+						if focused_interactable_entity.built:
+							var damage_data: DamageData = DamageData.new()
+							damage_data.damage_strength = 1.0
+							focused_interactable_entity.damage(damage_data, character)
+		
+		if Input.is_action_just_pressed("interact_" + str(local_id)):
+			if !character.grabbed_entity:
+				if focused_interactable_entity:
+					if focused_interactable_entity is BlockPile:
+						focused_interactable_entity.try_craft()
+		
 		#if Input.is_action_just_pressed("item_" + str(local_id)): character.use_item()
-		#if Input.is_action_just_pressed("interact_" + str(local_id)):
-			#if can_interact && focus_world_entity.has_method("interact"):
-				#focus_world_entity.interact(character, focus_world_pos, self)
 	
 	if Input.is_action_pressed("sprint_" + str(local_id)): character.set_sprinting(true)
 	if Input.is_action_just_released("sprint_" + str(local_id)): character.set_sprinting(false)
@@ -313,19 +365,30 @@ func set_cursor_captured() -> void:
 # ////////////////////////////////////////////////////////////////////////////////////////////////
 # CHARACTER
 func respawn_character() -> void:
+	if is_instance_valid(character): character.queue_free()
+	
 	const CHARACTER_SCN: PackedScene = preload("res://systems/character/character.scn")
 	character = CHARACTER_SCN.instantiate()
 	
+	character.body_data = body_data
 	character.position = Util.main.spawn_point
-	character.team = 1
+	character.team = 0
+	character.pickup_received.connect(_on_pickup_received)
 	
 	add_child(character)
 	_init_camera_rig()
-	set_cursor_captured()
+
+func _on_pickup_received(pickup: PickupData) -> void:
+	if pickup.metadata.has("coins"): game_resources.coins += pickup.metadata["coins"]
+	if pickup.metadata.has("bread"):
+		if is_instance_valid(Util.main.level.faction_bread_piles[0]):
+			Util.main.level.faction_bread_piles[0].bread_count += pickup.metadata["bread"]
 
 # ////////////////////////////////////////////////////////////////////////////////////////////////
 # GAME START
 func _on_game_started() -> void:
+	game_resources = GameResources.new()
+	if !Util.main.level.faction_bread_piles.is_empty() && is_instance_valid(Util.main.level.faction_bread_piles[0]): game_resources.bread = Util.main.level.faction_bread_piles[0].bread_count
 	respawn_character()
 
 # ////////////////////////////////////////////////////////////////////////////////////////////////
@@ -412,6 +475,8 @@ func _init_camera_rig() -> void:
 	for i in 4:
 		if i == local_id: continue
 		camera_rig.camera_3d.cull_mask &= ~(1 << (15 + i))
+	
+	camera_rig.anchor_position = Util.main.spawn_point + Vector3.UP
 
 func set_camera_rig(_camera_rig: CameraRig) -> void:
 	camera_rig = _camera_rig

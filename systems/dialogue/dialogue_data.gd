@@ -1,3 +1,5 @@
 class_name DialogueData extends Resource
 
-@export var lines: Array[String]
+# (({[%%%(({[=======================================================================================================================]}))%%%]}))
+@export var speaker: DialogueSpeakerData
+@export var lines: Array[DialogueLineData]

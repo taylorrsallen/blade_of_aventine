@@ -13,12 +13,16 @@ config_version=5
 config/name="Blade of Aventine"
 run/main_scene="res://systems/managers/main.scn"
 config/features=PackedStringArray("4.3", "GL Compatibility")
-config/icon="res://icon.svg"
+boot_splash/image="res://level_path_cost.png"
 
 [autoload]
 
 SoundManager="*res://systems/managers/sound_manager/sound_manager.gd"
 AreaQueryManager="*res://systems/managers/area_query_manager.gd"
+
+[debug]
+
+gdscript/warnings/narrowing_conversion=0
 
 [display]
 
@@ -119,6 +123,8 @@ zoom_out_0={
 3d_physics/layer_1="TERRAIN"
 3d_physics/layer_2="CHARACTERS"
 3d_physics/layer_3="CHARACTER_DAMAGE"
+3d_physics/layer_4="PICKUPS"
+3d_physics/layer_5="CHARACTERS_WITH_BREAD"
 3d_physics/layer_10="INTERACTABLES"
 
 [rendering]

@@ -4,6 +4,8 @@ class_name Character extends RigidBody3D
 signal jumped()
 signal landed(force: float)
 signal killed()
+signal pickup_received(pickup: PickupData)
+signal finished_eating()
 
 # (({[%%%(({[=======================================================================================================================]}))%%%]}))
 enum CharacterFlag {
@@ -20,6 +22,10 @@ enum CharacterAction {
 	SECONDARY,
 	SECONDARY_ALT,
 }
+
+# (({[%%%(({[=======================================================================================================================]}))%%%]}))
+const RANDOM_NOISES: PackedScene = preload("res://systems/character/noises/random_noises.scn")
+const PICKUP: PackedScene = preload("res://systems/level/entities/pickup/pickup.scn")
 
 # (({[%%%(({[=======================================================================================================================]}))%%%]}))
 ## COMPOSITION
@@ -63,7 +69,7 @@ var move_direction: Vector3
 
 @export var walk_speed: float = 3.0
 @export var jog_speed: float = 5.0
-@export var sprint_speed: float = 8.0
+@export var sprint_speed: float = 7.0
 var current_speed: float = walk_speed
 
 @export var jump_velocity: float = 4.5
@@ -83,6 +89,14 @@ var grabbed_entity: Interactable
 
 ## AI INTERACTION
 @export var team: int
+
+## AUDIO
+var random_noises: RandomNoises
+
+## EATING BREAD
+var eating: bool
+var eating_timer: float
+var eating_sound_timer: float
 
 # (({[%%%(({[=======================================================================================================================]}))%%%]}))
 func is_flag_on(flag: CharacterFlag) -> bool: return Util.is_flag_on(flags, flag)
@@ -111,6 +125,15 @@ func _set_character_body_data(_body_data: CharacterBodyData) -> void:
 	camera_socket = Node3D.new()
 	body_center_pivot.add_child(camera_socket)
 	camera_socket.position.y = body_data.height * 0.3
+	
+	jog_speed = body_data.base_speed
+	sprint_speed = body_data.sprint_speed
+	
+	if body_data.random_noises_pool:
+		if is_instance_valid(random_noises): random_noises.queue_free()
+		random_noises = RANDOM_NOISES.instantiate()
+		random_noises.random_sound_pool = body_data.random_noises_pool
+		add_child(random_noises)
 
 func get_eye_target() -> Node3D:
 	return body.get_eye_target()
@@ -131,7 +154,13 @@ func _physics_process(delta: float) -> void:
 	else:
 		pass # Send inputs to vehicle, just like how Controller sends input to Character
 	
-	if grabbed_entity: _update_grabbed_entity()
+	if eating:
+		_update_eating(delta)
+	else:
+		if is_instance_valid(grabbed_entity):
+			_update_grabbed_entity()
+		else:
+			grabbed_entity = null
 
 # (({[%%%(({[=======================================================================================================================]}))%%%]}))
 func use_primary() -> void:
@@ -153,8 +182,12 @@ func grab_entity(entity: Interactable) -> void:
 	grabbed_entity = entity
 
 func drop_grabbed_entity() -> Interactable:
+	if !is_instance_valid(grabbed_entity):
+		grabbed_entity = null
+		return null
 	var entity: Interactable = grabbed_entity
 	grabbed_entity.enable_collision()
+	grabbed_entity.drop(self)
 	grabbed_entity = null
 	return entity
 
@@ -219,12 +252,18 @@ func face_direction(direction: Vector3, delta: float) -> void:
 		nav_collider.basis = Basis.IDENTITY
 
 func _update_movement(delta: float) -> void:
-	if is_flag_on(CharacterFlag.WALK):
-		current_speed = walk_speed
-	elif is_flag_on(CharacterFlag.SPRINT):
-		current_speed = sprint_speed
+	if eating:
+		current_speed = 0.0
 	else:
-		current_speed = jog_speed
+		if is_flag_on(CharacterFlag.WALK):
+			current_speed = walk_speed
+		elif is_flag_on(CharacterFlag.SPRINT):
+			current_speed = sprint_speed
+		else:
+			current_speed = jog_speed
+	
+	if is_instance_valid(grabbed_entity):
+		current_speed -= grabbed_entity.weight_slow_down
 	
 	_update_movement_grounded(delta)
 
@@ -322,12 +361,49 @@ func _update_ride_force() -> void:
 
 # (({[%%%(({[=======================================================================================================================]}))%%%]}))
 func _on_killed() -> void:
+	if body_data.drops_data:
+		for drop_data in body_data.drops_data.drops:
+			for i in drop_data.amount:
+				if drop_data.should_drop():
+					var pickup: Pickup = PICKUP.instantiate()
+					pickup.pickup_data = drop_data.pickup_data
+					pickup.position = global_position
+					Util.main.level.add_pickup(pickup)
+	
+	if grabbed_entity: drop_grabbed_entity()
+	
 	killed.emit()
 	queue_free()
 
 var temp_hp: float = 3.0
-func _on_damageable_area_3d_damaged(damage_data: DamageData, area_id: int) -> void:
-	print(temp_hp)
+func _on_damageable_area_3d_damaged(damage_data: DamageData, _area_id: int, source: Node) -> void:
 	temp_hp -= damage_data.damage_strength
 	if temp_hp < 0.0:
+		if is_instance_valid(source) && source.has_method("add_experience"):
+			source.add_experience(body_data.get_experience_value())
 		_on_killed()
+
+# (({[%%%(({[=======================================================================================================================]}))%%%]}))
+func receive_pickup(pickup: PickupData) -> void:
+	pickup_received.emit(pickup)
+
+# (({[%%%(({[=======================================================================================================================]}))%%%]}))
+func eat(grabbable_bread: GrabbableBread) -> void:
+	body.set_eating(grabbable_bread)
+	world_move_input = Vector3.ZERO
+	eating = true
+
+func _update_eating(delta: float) -> void:
+	eating_sound_timer += delta
+	if eating_sound_timer >= body_data.eating_noise_cd:
+		eating_sound_timer -= body_data.eating_noise_cd
+		var sound_reference: SoundReferenceData = body_data.eating_sounds_pool.pool.pick_random()
+		SoundManager.play_pitched_3d_sfx(sound_reference.id, sound_reference.type, global_position, 0.9, 1.1, 0.0, 6.0)
+	
+	eating_timer += delta
+	if eating_timer >= body_data.time_to_eat:
+		Util.player.game_resources.bread -= 1
+		grabbed_entity.queue_free()
+		body.set_eating(null)
+		finished_eating.emit()
+		eating = false

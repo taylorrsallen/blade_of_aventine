@@ -1,6 +1,6 @@
 extends Node
 
-# ////////////////////////////////////////////////////////////////////////////////////////////////
+# (({[%%%(({[=======================================================================================================================]}))%%%]}))
 enum BackgroundTrackLayer {
 	WIND_0,
 	WIND_1,
@@ -8,30 +8,41 @@ enum BackgroundTrackLayer {
 	RAIN_1,
 	DRONE_0,
 	DRONE_1,
+	MUSIC_0,
+	MUSIC_1,
+	MUSIC_2,
 }
 
-# ////////////////////////////////////////////////////////////////////////////////////////////////
+# (({[%%%(({[=======================================================================================================================]}))%%%]}))
 const MAX_BACKGROUND_TRACKS: int = 16
 const AUDIO_BUSES: Array[String] = [
 	"Master",
 ]
 
-@export var background_tracks: Array[BackgroundTrack] = []
 const SOUND_DATABASE: SoundDatabase = preload("res://resources/sounds/sound_database.res")
 
-# ////////////////////////////////////////////////////////////////////////////////////////////////
+# (({[%%%(({[=======================================================================================================================]}))%%%]}))
+@export var background_tracks: Array[BackgroundTrack] = []
+@export var background_track_fades: Array[BackgroundTrackFade]
+
 var max_sounds: int = 64
 var current_sounds: int
 
-# ////////////////////////////////////////////////////////////////////////////////////////////////
+# (({[%%%(({[=======================================================================================================================]}))%%%]}))
 func _enter_tree() -> void: for _i in MAX_BACKGROUND_TRACKS: background_tracks.append(null)
 
-# ////////////////////////////////////////////////////////////////////////////////////////////////
-func play_ui_sfx(id: int, volume_db: float = 0.0, pitch: float = 1.0, bus: int = 0) -> void:
-	_play_ui_sfx(SOUND_DATABASE.ui[id], volume_db, pitch, bus)
+func _physics_process(delta: float) -> void:
+	var fades_to_erase: Array[BackgroundTrackFade] = []
+	for background_track_fade in background_track_fades:
+		if background_track_fade.try_finish(delta): fades_to_erase.append(background_track_fade)
+	for fade_to_erase in fades_to_erase: background_track_fades.erase(fade_to_erase)
 
-func play_pitched_ui_sfx(id: int, pitch_min: float = 0.9, pitch_max: float = 1.1, volume_db: float = 0.0, bus: int = 0) -> void:
-	_play_pitched_ui_sfx(SOUND_DATABASE.ui[id], pitch_min, pitch_max, volume_db, bus)
+# (({[%%%(({[=======================================================================================================================]}))%%%]}))
+func play_ui_sfx(id: int, type: SoundDatabase.SoundType, volume_db: float = 0.0, pitch: float = 1.0, bus: int = 0) -> void:
+	_play_ui_sfx(SOUND_DATABASE.get_sound(id, type), volume_db, pitch, bus)
+
+func play_pitched_ui_sfx(id: int, type: SoundDatabase.SoundType, pitch_min: float = 0.9, pitch_max: float = 1.1, volume_db: float = 0.0, bus: int = 0) -> void:
+	_play_pitched_ui_sfx(SOUND_DATABASE.get_sound(id, type), pitch_min, pitch_max, volume_db, bus)
 
 func _play_ui_sfx(stream: AudioStream, volume_db: float, pitch: float, bus: int) -> void:
 	if current_sounds >= max_sounds: return
@@ -51,7 +62,7 @@ func _play_ui_sfx(stream: AudioStream, volume_db: float, pitch: float, bus: int)
 func _play_pitched_ui_sfx(stream: AudioStream, pitch_min: float, pitch_max: float, volume_db: float, bus: int) -> void:
 	_play_ui_sfx(stream, volume_db, randf_range(pitch_min, pitch_max), bus)
 
-# ////////////////////////////////////////////////////////////////////////////////////////////////
+# (({[%%%(({[=======================================================================================================================]}))%%%]}))
 func play_3d_sfx(id: int, type: SoundDatabase.SoundType, position: Vector3, volume_db: float = 0.0, unit_size: float = 10.0, pitch: float = 1.0, bus: int = 0) -> void:
 	_play_3d_sfx(SOUND_DATABASE.get_sound(id, type), position, volume_db, unit_size, pitch, bus)
 
@@ -78,7 +89,7 @@ func _play_3d_sfx(stream: AudioStream, position: Vector3, volume_db: float, unit
 func _play_pitched_3d_sfx(stream: AudioStream, position: Vector3, pitch_min: float, pitch_max: float, volume_db: float, unit_size: float, bus: int) -> void:
 	_play_3d_sfx(stream, position, volume_db, unit_size, randf_range(pitch_min, pitch_max), bus)
 
-# ////////////////////////////////////////////////////////////////////////////////////////////////
+# (({[%%%(({[=======================================================================================================================]}))%%%]}))
 func play_background_track(id: int, type: SoundDatabase.SoundType, layer: int, loop: bool = true, volume_db: float = 0.0, pitch: float = 1.0, bus: int = 0) -> void:
 	_play_background_track(SOUND_DATABASE.get_sound(id, type), layer, loop, volume_db, pitch, bus)
 
@@ -119,4 +130,14 @@ func unpause_background_track(layer: int) -> void:
 	if layer >= MAX_BACKGROUND_TRACKS: return
 	if background_tracks[layer]: background_tracks[layer].play()
 
+func fade_background_track(layer: int, fade_time: float = 5.0, start_db: float = 31.0, target_db: float = -40.0, erase_when_complete: bool = false) -> void:
+	var fade: BackgroundTrackFade = BackgroundTrackFade.new()
+	fade.bgt_layer = layer
+	fade.fade_time = fade_time
+	fade.start_db = background_tracks[layer].volume_db if start_db > 30.0 else start_db
+	fade.target_db = clampf(target_db, -999.9, 30.0)
+	fade.erase_when_complete = erase_when_complete
+	background_track_fades.append(fade)
+
+# (({[%%%(({[=======================================================================================================================]}))%%%]}))
 func _on_sound_finished() -> void: current_sounds -= 1

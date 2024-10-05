@@ -1,10 +1,4 @@
-class_name BallisticProjectile extends Node3D
-
-# (({[%%%(({[=======================================================================================================================]}))%%%]}))
-@export var direction: Vector3
-@export var speed: float
-@export var lifetime: float = 10.0
-var lifetime_timer: float
+class_name BallisticProjectile extends ProjectileBase
 
 # (({[%%%(({[=======================================================================================================================]}))%%%]}))
 func _ready() -> void:
@@ -14,8 +8,20 @@ func _physics_process(delta: float) -> void:
 	global_position += direction * speed * delta
 	lifetime_timer += delta
 	if lifetime_timer >= lifetime: queue_free()
+	
+	pierce_delay_timer += delta
+	if pierce_delay_timer >= pierce_delay:
+		pierce_delay_timer -= pierce_delay
+		$DamagingArea3D.active = true
 
 # (({[%%%(({[=======================================================================================================================]}))%%%]}))
 func _on_damage_dealt() -> void:
-	$DamagingArea3D.active = false
-	queue_free()
+	if die_on_contact:
+		_destroy()
+	elif piercing_hits > 0:
+		if pierce_count == piercing_hits:
+			_destroy()
+		else:
+			$DamagingArea3D.active = false
+			pierce_delay_timer = 0.0
+			pierce_count += 1

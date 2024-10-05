@@ -3,7 +3,7 @@ extends Node
 var queue: Array[Dictionary] = []
 var cache: Dictionary = {}
 
-var calc_per_frame: int = 3
+var calc_per_frame: int = 5
 
 func _physics_process(_delta: float) -> void:
 	for _i in calc_per_frame: _dequeue_area_query()
