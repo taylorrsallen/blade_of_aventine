@@ -113,7 +113,8 @@ func _try_attack(delta: float) -> void:
 	
 	DebugDraw3D.draw_line(closest_target.global_position, closest_target.global_position + Vector3.UP * 5.0, Color.RED, delta)
 	
-	if closest_target.global_position.distance_to(character.global_position) > character.body_data.attack_range: return
+	var attack_target_position: Vector3 = Vector3(closest_target.global_position.x, 0.0, closest_target.global_position.z)
+	if attack_target_position.distance_to(character.global_position) > character.body_data.attack_range: return
 	
 	if attack_timer == character.body_data.attack_rate:
 		attack_timer = 0.0
@@ -128,7 +129,7 @@ func _try_attack(delta: float) -> void:
 func update_area_query(results: Array[PhysicsBody3D]) -> void:
 	waiting_on_area_query = false
 	for result in results:
-		if result is InteractableCollider && result.get_parent() is TowerBase && result.get_parent().team != character.team:
+		if result is InteractableCollider && result.get_parent().has_method("damage") && result.get_parent().team != character.team:
 			attack_targets.append(result.get_parent())
 
 func get_closest_target() -> Interactable:

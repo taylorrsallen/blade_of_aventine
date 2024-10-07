@@ -12,5 +12,5 @@ func interact(source: Character, controller: PlayerController) -> void:
 	interacted.emit(self, source, controller)
 
 # (({[%%%(({[=======================================================================================================================]}))%%%]}))
-func give_coins_for_block(block_data: BlockData, character: Character) -> void:
-	buy_block_from_character.emit(block_data, character)
+func give_coins_for_block(_block_data: BlockData, character: Character) -> void:
+	buy_block_from_character.emit(_block_data, character)

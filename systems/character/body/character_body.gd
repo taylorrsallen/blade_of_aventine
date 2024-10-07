@@ -22,7 +22,7 @@ func stagger() -> void: pass
 func die() -> void: pass
 
 ## Toggle animations
-func set_eating(node: Node3D) -> void: pass
+func set_eating(_node: Node3D) -> void: pass
 func set_dancing(_active: bool) -> void: pass
 func set_grabbing(_active: bool) -> void: pass
 func set_walking(_active: bool) -> void: pass

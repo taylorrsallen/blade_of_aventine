@@ -12,7 +12,7 @@ func _ready() -> void:
 	reader.sound_queue.connect(_on_sound_queue)
 	reader.finished_reading.connect(_on_finished_reading)
 
-func _physics_process(delta: float) -> void:
+func _physics_process(_delta: float) -> void:
 	label_3d.text = reader.active_text
 
 # (({[%%%(({[=======================================================================================================================]}))%%%]}))

@@ -1,5 +1,4 @@
-extends Area3D
-class_name DamageableArea3D
+class_name DamageableArea3D extends StaticBody3D
 
 signal damaged(damage_data: DamageData, area_id: int, source: Node)
 

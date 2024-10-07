@@ -1,7 +1,7 @@
 extends Node
 class_name PlayerController
 
-# ////////////////////////////////////////////////////////////////////////////////////////////////
+# (({[%%%(({[=======================================================================================================================]}))%%%]}))
 enum PlayerControllerFlag {
 	CURSOR_VISIBLE,
 	MENU_VISIBLE,
@@ -19,14 +19,14 @@ enum Perspective {
 	TPS,
 }
 
-# ////////////////////////////////////////////////////////////////////////////////////////////////
+# (({[%%%(({[=======================================================================================================================]}))%%%]}))
 const SPLITSCREEN_VIEW_SCN: PackedScene = preload("res://systems/controller/player/splitscreen_view.scn")
 const SHADER_VIEW_SCN: PackedScene = preload("res://systems/controller/player/shader_view.scn")
 const CAMERA_RIG: PackedScene = preload("res://systems/camera/camera_rig.scn")
 
 const START_MENU: PackedScene = preload("res://systems/gui/menus/start_menu.scn")
 
-# ////////////////////////////////////////////////////////////////////////////////////////////////
+# (({[%%%(({[=======================================================================================================================]}))%%%]}))
 ## COMPOSITION
 @onready var multiplayer_synchronizer: MultiplayerSynchronizer = $MultiplayerSynchronizer
 
@@ -79,10 +79,14 @@ var selection_position: Vector3
 @export var respawn_cd: float = 5.0
 var respawn_timer: float
 
+@export var dance_exp: float = 1.0
+@export var dance_exp_cd: float = 0.2
+var dance_exp_timer: float
+
 ## GAME DATA
 @export var game_resources: GameResources
 
-# ////////////////////////////////////////////////////////////////////////////////////////////////
+# (({[%%%(({[=======================================================================================================================]}))%%%]}))
 func _set_perspective(_perspective: Perspective) -> void:
 	if perspective == _perspective: return
 	perspective = _perspective
@@ -100,7 +104,7 @@ func _set_focused_interactable(_focused_interactable: Interactable) -> void:
 		if is_instance_valid(_focused_interactable): _focused_interactable.set_highlighted(true, character, self)
 		focused_interactable = _focused_interactable
 
-# ////////////////////////////////////////////////////////////////////////////////////////////////
+# (({[%%%(({[=======================================================================================================================]}))%%%]}))
 func init() -> void:
 	Util.main.game_started.connect(_on_game_started)
 	
@@ -108,7 +112,7 @@ func init() -> void:
 	_assign_default_keyboard_controls(0, 0)
 
 func _physics_process(delta: float) -> void:
-	if Util.main.level.started && game_resources.bread == 0:
+	if Util.main.level.started && !Util.main.level.no_waves && game_resources.bread == 0:
 		Util.main.level.unload()
 		SoundManager.erase_background_track(SoundManager.BackgroundTrackLayer.MUSIC_0)
 		SoundManager.erase_background_track(SoundManager.BackgroundTrackLayer.MUSIC_1)
@@ -141,8 +145,8 @@ func _physics_process(delta: float) -> void:
 			camera_rig.zoom = clampf(camera_rig.zoom + 0.5, 0.5, 7.0)
 		
 		if !is_flag_on(PlayerControllerFlag.CURSOR_VISIBLE):
-			var cursor_movement: Vector2 = get_viewport().size * 0.5 - get_viewport().get_mouse_position()
-			get_viewport().warp_mouse(get_viewport().size * 0.5)
+			var cursor_movement: Vector2 = (get_viewport().size * 0.5).floor() - get_viewport().get_mouse_position()
+			get_viewport().warp_mouse((get_viewport().size * 0.5).floor())
 			camera_rig.apply_inputs(raw_move_input, cursor_movement, delta)
 			camera_rig.apply_camera_rotation()
 			look_input = Vector2.ZERO
@@ -152,6 +156,7 @@ func _physics_process(delta: float) -> void:
 		
 	if is_instance_valid(character):
 		_update_selection()
+		_dance_for_me(delta)
 		
 		#DebugDraw3D.draw_aabb(AABB(selection_position, Vector3.ONE), Color.ORANGE, delta)
 		#DebugDraw3D.draw_line(selection_position, selection_position + Vector3.UP * 5.0, Color.ORANGE, 0.016)
@@ -184,6 +189,16 @@ func _physics_process(delta: float) -> void:
 
 func _unhandled_input(event: InputEvent) -> void:
 	if event is InputEventMouseMotion: look_input = Vector2(-event.relative.x, -event.relative.y)
+
+func _dance_for_me(delta: float) -> void:
+	if is_instance_valid(focused_interactable) && focused_interactable is TowerBase && focused_interactable.built:
+		character.body.set_dancing(true)
+		dance_exp_timer += delta
+		if dance_exp_timer >= dance_exp_cd:
+			dance_exp_timer -= dance_exp_cd
+			focused_interactable.add_experience(dance_exp)
+	else:
+		character.body.set_dancing(false)
 
 func _update_selection() -> void:
 	selection_position = (character.global_position + camera_rig.get_yaw_forward()).floor()
@@ -218,18 +233,18 @@ func _update_selection() -> void:
 	aventine_highlighter.visible = show_highlighter
 	selection_cursor.visible = show_selection_cursor
 
-# ////////////////////////////////////////////////////////////////////////////////////////////////
+# (({[%%%(({[=======================================================================================================================]}))%%%]}))
 func is_flag_on(flag: PlayerControllerFlag) -> bool: return Util.is_flag_on(flags, flag)
 func set_flag_on(flag: PlayerControllerFlag) -> void: flags = Util.set_flag_on(flags, flag)
 func set_flag_off(flag: PlayerControllerFlag) -> void: flags = Util.set_flag_off(flags, flag)
 func set_flag(flag: PlayerControllerFlag, active: bool) -> void: flags = Util.set_flag(flags, flag, active)
 
-# ////////////////////////////////////////////////////////////////////////////////////////////////
+# (({[%%%(({[=======================================================================================================================]}))%%%]}))
 ## For removing non-host local players from the game
 func remove() -> void:
 	if local_id == 0: return
 
-# ////////////////////////////////////////////////////////////////////////////////////////////////
+# (({[%%%(({[=======================================================================================================================]}))%%%]}))
 func update_area_query(results: Array[PhysicsBody3D]) -> void:
 	if !is_instance_valid(character): return
 	
@@ -250,7 +265,7 @@ func update_area_query(results: Array[PhysicsBody3D]) -> void:
 	
 	focused_interactable = new_focused_interactable
 
-# ////////////////////////////////////////////////////////////////////////////////////////////////
+# (({[%%%(({[=======================================================================================================================]}))%%%]}))
 func _update_hud() -> void:
 	if !game_resources: return
 	DebugDraw2D.set_text("Coins: ", game_resources.coins, 0, Color.GOLD)
@@ -259,6 +274,7 @@ func _update_hud() -> void:
 	var bread_pile: BreadPile = Util.main.level.faction_bread_piles[0]
 	if is_instance_valid(bread_pile): DebugDraw2D.set_text("Bread in Pile: ", bread_pile.bread_count, 2, Color.SANDY_BROWN)
 
+# (({[%%%(({[=======================================================================================================================]}))%%%]}))
 func _update_character_input(_delta: float) -> void:
 	character.look_basis = camera_rig.rotation_target.basis
 	character.look_direction = camera_rig.get_camera_forward()
@@ -269,21 +285,8 @@ func _update_character_input(_delta: float) -> void:
 	
 	if !is_flag_on(PlayerControllerFlag.CURSOR_VISIBLE):
 		if Input.is_action_just_pressed("primary_" + str(local_id)): _primary()
-		
-		if Input.is_action_just_pressed("secondary_" + str(local_id)):
-			if !character.grabbed_entity:
-				if focused_interactable:
-					if focused_interactable is TowerBase:
-						if focused_interactable.built:
-							var damage_data: DamageData = DamageData.new()
-							damage_data.damage_strength = 1.0
-							focused_interactable.damage(damage_data, character)
-		
-		if Input.is_action_just_pressed("interact_" + str(local_id)):
-			if !character.grabbed_entity:
-				if focused_interactable:
-					if focused_interactable is BlockPile:
-						focused_interactable.try_craft()
+		if Input.is_action_just_pressed("secondary_" + str(local_id)): _secondary()
+		if Input.is_action_just_pressed("interact_" + str(local_id)): _interact()
 		
 		#if Input.is_action_just_pressed("item_" + str(local_id)): character.use_item()
 	
@@ -331,6 +334,19 @@ func _primary() -> void:
 	
 	character.use_primary()
 
+func _secondary() -> void:
+	if is_instance_valid(character.grabbed_entity): return
+	if !is_instance_valid(focused_interactable): return
+	if focused_interactable is TowerBase && focused_interactable.built:
+		focused_interactable.deal_scepter_damage()
+
+func _interact() -> void:
+	if is_instance_valid(character.grabbed_entity): return
+	if !is_instance_valid(focused_interactable): return
+	if focused_interactable is BlockPile:
+		focused_interactable.try_craft()
+
+# (({[%%%(({[=======================================================================================================================]}))%%%]}))
 func get_interactable_from_global_coord(global_coord: Vector3) -> Interactable:
 	var entities_in_selection: Array[PhysicsBody3D] = AreaQueryManager.query_area(global_coord + Vector3(0.5, 0.0, 0.5), 0.1, 512)
 	if !entities_in_selection.is_empty(): return entities_in_selection[0].get_parent()
@@ -383,7 +399,7 @@ func _bound_cursor_pos() -> void:
 	else: if cursor_pos.y > splitscreen_view.size.y:
 		cursor_pos.y = splitscreen_view.size.y
 
-# ////////////////////////////////////////////////////////////////////////////////////////////////
+# (({[%%%(({[=======================================================================================================================]}))%%%]}))
 func toggle_cursor_visible() -> void:
 	if !is_flag_on(PlayerControllerFlag.CURSOR_VISIBLE):
 		set_cursor_visible()
@@ -398,7 +414,7 @@ func set_cursor_captured() -> void:
 	Input.mouse_mode = Input.MOUSE_MODE_CONFINED_HIDDEN
 	set_flag_off(PlayerControllerFlag.CURSOR_VISIBLE)
 
-# ////////////////////////////////////////////////////////////////////////////////////////////////
+# (({[%%%(({[=======================================================================================================================]}))%%%]}))
 # CHARACTER
 func respawn_character() -> void:
 	if is_instance_valid(character): character.queue_free()
@@ -420,14 +436,14 @@ func _on_pickup_received(pickup: PickupData) -> void:
 		if is_instance_valid(Util.main.level.faction_bread_piles[0]):
 			Util.main.level.faction_bread_piles[0].bread_count += pickup.metadata["bread"]
 
-# ////////////////////////////////////////////////////////////////////////////////////////////////
+# (({[%%%(({[=======================================================================================================================]}))%%%]}))
 # GAME START
 func _on_game_started() -> void:
 	game_resources = GameResources.new()
 	if !Util.main.level.faction_bread_piles.is_empty() && is_instance_valid(Util.main.level.faction_bread_piles[0]): game_resources.bread = Util.main.level.faction_bread_piles[0].bread_count
 	respawn_character()
 
-# ////////////////////////////////////////////////////////////////////////////////////////////////
+# (({[%%%(({[=======================================================================================================================]}))%%%]}))
 # SPLITSCREEN
 func update_splitscreen_view(player_count: int, horizontal: bool = true) -> void:
 	match player_count:
@@ -484,7 +500,7 @@ func _update_4_player_splitscreen_view() -> void:
 		2: _set_view_anchors(0.0, 0.5, 1.0, 0.5)
 		3: _set_view_anchors(0.5, 1.0, 1.0, 0.5)
 
-# ////////////////////////////////////////////////////////////////////////////////////////////////
+# (({[%%%(({[=======================================================================================================================]}))%%%]}))
 # CAMERA
 func _init_camera_rig() -> void:
 	camera_rig.perspective = perspective
@@ -534,7 +550,7 @@ func spawn_camera_rig() -> void:
 	camera_view_layer.add_child(camera_rig)
 	_init_camera_rig()
 
-# ////////////////////////////////////////////////////////////////////////////////////////////////
+# (({[%%%(({[=======================================================================================================================]}))%%%]}))
 # INPUT
 
 # ------------------------------------------------------------------------------------------------

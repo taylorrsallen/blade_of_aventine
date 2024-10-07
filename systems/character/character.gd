@@ -14,6 +14,7 @@ enum CharacterFlag {
 	SPRINT,
 	TUMBLING,
 	NOCLIP,
+	DEAD,
 }
 
 enum CharacterAction {
@@ -182,7 +183,7 @@ func use_item() -> void:
 # (({[%%%(({[=======================================================================================================================]}))%%%]}))
 func grab_entity(entity: Interactable) -> void:
 	if grabbed_entity: drop_grabbed_entity()
-	entity.disable_collision()
+	entity.set_grabbed(true)
 	grabbed_entity = entity
 
 func drop_grabbed_entity() -> Interactable:
@@ -190,7 +191,7 @@ func drop_grabbed_entity() -> Interactable:
 		grabbed_entity = null
 		return null
 	var entity: Interactable = grabbed_entity
-	grabbed_entity.enable_collision()
+	grabbed_entity.set_grabbed(false)
 	grabbed_entity.drop(self)
 	grabbed_entity = null
 	return entity
@@ -207,14 +208,6 @@ func toggle_sprinting() -> void:
 		set_flag_off(CharacterFlag.SPRINT)
 	else:
 		set_flag_on(CharacterFlag.SPRINT)
-
-func toggle_no_clip() -> void:
-	if is_flag_on(CharacterFlag.NOCLIP):
-		set_flag_off(CharacterFlag.NOCLIP)
-		collision_mask = default_collision_mask
-	else:
-		set_flag_on(CharacterFlag.NOCLIP)
-		collision_mask = 0
 
 # (({[%%%(({[=======================================================================================================================]}))%%%]}))
 func set_yaw_look_basis(_basis: Basis) -> void:
@@ -381,8 +374,11 @@ func _on_killed() -> void:
 
 var temp_hp: float = 3.0
 func _on_damageable_area_3d_damaged(damage_data: DamageData, _area_id: int, source: Node) -> void:
+	if is_flag_on(CharacterFlag.DEAD): return
+	
 	temp_hp -= damage_data.damage_strength
 	if temp_hp < 0.0:
+		set_flag_on(CharacterFlag.DEAD)
 		if is_instance_valid(source) && source.has_method("add_experience"):
 			source.add_experience(body_data.get_experience_value())
 		_on_killed()
@@ -411,3 +407,7 @@ func _update_eating(delta: float) -> void:
 		body.set_eating(null)
 		finished_eating.emit()
 		eating = false
+
+# (({[%%%(({[=======================================================================================================================]}))%%%]}))
+func get_velocity() -> Vector3:
+	return linear_velocity

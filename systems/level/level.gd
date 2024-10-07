@@ -50,6 +50,7 @@ var loading: bool
 var started: bool
 var boss_prep_started: bool
 var completed: bool
+var no_waves: bool
 
 # (({[%%%(({[=======================================================================================================================]}))%%%]}))
 func _ready() -> void:
@@ -58,7 +59,7 @@ func _ready() -> void:
 		faction_base_local_coords.append(Vector2i.ZERO)
 
 func _physics_process(delta: float) -> void:
-	if loading: return
+	if loading || no_waves: return
 	
 	if !boss_prep_started && waves.size() == 1 && active_wave.time_to_next_wave - wave_timer < 5.5:
 		boss_prep_started = true
@@ -237,10 +238,12 @@ func unload() -> void:
 	
 	active_wave = null
 	waves.clear()
+	wave_timer = 0.0
 	
 	started = false
 	boss_prep_started = false
 	completed = false
+	no_waves = false
 
 func load_from_level_id(level_id: int) -> void:
 	load_from_data(LEVEL_DATABASE.database[level_id])
@@ -256,6 +259,7 @@ func load_from_data(level_data: LevelData) -> void:
 	
 	data = level_data
 	waves = data.waves.duplicate()
+	if waves.is_empty(): no_waves = true
 	
 	await load_layout_from_image(data.layout_texture.get_image())
 	
@@ -264,7 +268,7 @@ func load_from_data(level_data: LevelData) -> void:
 	
 	Util.main.game_started.emit()
 	
-	SoundManager.play_background_track(3, SoundDatabase.SoundType.BGT_MUSIC, SoundManager.BackgroundTrackLayer.MUSIC_1, true, -6.0)
+	SoundManager.play_background_track(3, SoundDatabase.SoundType.BGT_MUSIC, SoundManager.BackgroundTrackLayer.MUSIC_1, true, -16.0)
 	started = true
 	loading = false
 
@@ -359,3 +363,24 @@ func _on_faction_defeated(bread_pile: BreadPile) -> void:
 		bread_pile.faction_defeated.disconnect(_on_faction_defeated)
 		bread_pile.queue_free()
 		faction_spawners[bread_pile.faction_id].queue_free()
+
+# (({[%%%(({[=======================================================================================================================]}))%%%]}))
+## This is purely for visual purposes. The scene is non-functional.
+func get_terrain_model_scene(level_data: LevelData) -> Node3D:
+	var terrain_model_scene: Node3D = Node3D.new()
+	var terrain_model_gridmap: GridMap = GridMap.new()
+	terrain_model_gridmap.mesh_library = terrain_grid_map.mesh_library
+	terrain_model_gridmap.cell_size = terrain_grid_map.cell_size
+	terrain_model_gridmap.cell_center_y = false
+	terrain_model_gridmap.collision_layer = 0
+	terrain_model_gridmap.collision_mask = 0
+	terrain_model_scene.add_child(terrain_model_gridmap)
+	
+	var layout_image: Image = level_data.layout_texture.get_image()
+	for z in level_dim: for x in level_dim:
+		var tile_color: Color = layout_image.get_pixel(x, z)
+		var terrain_tile_id: int = get_terrain_tile_id_from_color(tile_color)
+		var global_coord: Vector3i = Vector3i(x - level_dim * 0.5, 0.0, z - level_dim * 0.5)
+		terrain_model_gridmap.set_cell_item(global_coord, TERRAIN_TILE_DATABASE.database[terrain_tile_id].tile_mesh_id)
+	
+	return terrain_model_scene

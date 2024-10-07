@@ -11,10 +11,17 @@ var pile_height: float
 
 var valid_recipe: BlockPileRecipeData
 
+var damage_to_block_destruction: float = 2.0
+var damage_taken: float
+var destroyed: bool
+
 # (({[%%%(({[=======================================================================================================================]}))%%%]}))
 func _ready() -> void:
 	$StaticBody3D/CollisionShape3D.shape = $StaticBody3D/CollisionShape3D.shape.duplicate()
 	_refresh()
+
+func _physics_process(delta: float) -> void:
+	damage_taken = max(damage_taken - delta, 0.0)
 
 # (({[%%%(({[=======================================================================================================================]}))%%%]}))
 func add_block(block: BlockData) -> void:
@@ -73,3 +80,15 @@ func try_craft() -> void:
 	result.position = global_position - Vector3.UP * 5.0
 	Util.main.level.add_tile_entity(result)
 	queue_free()
+
+# (({[%%%(({[=======================================================================================================================]}))%%%]}))
+func damage(damage_data: DamageData, _source: Node) -> void:
+	if destroyed: return
+	
+	damage_taken += damage_data.damage_strength
+	if damage_taken >= damage_to_block_destruction:
+		damage_taken -= damage_to_block_destruction
+		var taken_block_pile: BlockPile = take_block()
+		if taken_block_pile == self:
+			destroyed = true
+			queue_free()

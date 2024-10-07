@@ -11,6 +11,8 @@ var lifetime: float
 
 # (({[%%%(({[=======================================================================================================================]}))%%%]}))
 func try_finish(delta: float) -> bool:
+	if !SoundManager.background_tracks[bgt_layer]: return true
+	
 	lifetime += delta
 	if lifetime < fade_time:
 		var fade_percent: float = lifetime / fade_time

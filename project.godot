@@ -22,6 +22,7 @@ AreaQueryManager="*res://systems/managers/area_query_manager.gd"
 
 [debug]
 
+gdscript/warnings/integer_division=0
 gdscript/warnings/narrowing_conversion=0
 
 [display]
@@ -35,6 +36,12 @@ folder_colors={
 "res://resources/": "blue",
 "res://scenes/": "purple",
 "res://systems/": "red"
+}
+
+[importer_defaults]
+
+animation_library={
+"gltf/embedded_image_handling": 3
 }
 
 [input]

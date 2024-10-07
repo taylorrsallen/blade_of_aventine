@@ -84,24 +84,24 @@ func _try_read_lines(delta: float) -> bool:
 	return false
 
 func _add_char_to_line() -> void:
-	var char: String = active_line.line[active_char]
+	var char_to_add: String = active_line.line[active_char]
 	var sound_id: int = data.speaker.beep.id
 	var sound_type: int = data.speaker.beep.type
 	var pitch: float = active_line.pitch * data.speaker.pitch
-	active_text += char
+	active_text += char_to_add
 	
-	if char == ",":
+	if char_to_add == ",":
 		char_read_cd_mod = 0.1 * active_line.speed * data.speaker.speed
 		sound_queue.emit(sound_id, sound_type, data.speaker.volume_db, 0.95 * pitch)
-	elif char == ".":
+	elif char_to_add == ".":
 		if active_char + 1 < active_line.line.length() && active_line.line[active_char + 1] == " ":
 			char_read_cd_mod = active_line.speed * data.speaker.speed
 		sound_queue.emit(sound_id, sound_type, data.speaker.volume_db, 0.95 * pitch)
-	elif char == "!":
+	elif char_to_add == "!":
 		if active_char + 1 < active_line.line.length() && active_line.line[active_char + 1] == " ":
 			char_read_cd_mod = active_line.speed * data.speaker.speed
 		sound_queue.emit(sound_id, sound_type, data.speaker.volume_db, 1.1 * pitch)
-	elif char != " ":
+	elif char_to_add != " ":
 		sound_queue.emit(sound_id, sound_type, data.speaker.volume_db, pitch)
 	else:
 		sound_queue.emit(sound_id, sound_type, data.speaker.volume_db - 4.0, pitch)

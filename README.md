@@ -41,14 +41,20 @@ Orcus brings Commodus back to life and tasks him with defending the Roman cultur
 - Barracks that spawn centurions
 - Horn that when interacted signals all ally units to attack enemy bread
 - Interact with horn again to signal retreat
+- Gong to interact with to bring enemy wave early
 
-- Put held exp into towers by standing next to them and holding E
-- Take exp out of towers by hitting them with your scepter
-- Towers level up at exp thresholds and gain specific buffs (same as Pixeljunk)
-- No tower friendly fire? (On second thought, maybe we keep it, it's kind of funny)
-- Towers prioritize targets with bread based on distance from point to protect, and they prioritize them over all other targets
+- Graphic to signify current tower level
+- Graphic to signify current tower exp
+- Graphic to signify current tower hp
+  
+- Not sure
+    - Put held exp into towers by standing next to them and holding E
+    - Take exp out of towers by hitting them with your scepter
+    - No tower friendly fire? (On second thought, maybe we keep it, it's kind of funny)
 
 - Final boss
+
+- Book that shows discovered tower recipes and hints at non-secret recipes
 
 - Victory screen
 - Defeat screen
@@ -73,17 +79,30 @@ Orcus brings Commodus back to life and tasks him with defending the Roman cultur
     - 
 
 - Towers
-    - Arbalest
-        - Wood/Bronze/Sinew
+    - Basic
+        - Arbalest
+            - Mid range, mid fire, mid damage, single target
+            - Ground & Air
+            - ~100 Value
+            - Wood/Bronze/Sinew
+        - Trebuchet
+            - Short range, slow fire, high damage, large AOE
+            - Ground only
+            - ~200 Value
+            - Wood/Wood/Sinew/Sinew/Marble
+        - Watch Tower
+            - Fast firing, but chooses targets randomly, mid range
+            - Slightly higher DPS than Arbalest, but no focus
+            - ~100 Value
+        - 
     - Fire Arbalest
         - Wood/Bronze/Sinew/Oil
     - Greek Fire (flamethrower, short range, very fast fire, low damage, AOE and DOT)
-        - Marble/Bronze/Oil
+        - Bronze/Bronze/Oil
     - Oil Hurler
         - Medium Range, causes slow and bonus damage from fire
         - Wood/Oil
-    - Trebuchet (cannon, long range, slow fire, high damage, large AOE)
-        - Wood/Wood/Sinew/Sinew/Marble
+  
     - Magic Missile (Arbalest with longer range & homing arrows)
         - Wood/Bronze/Sinew/Magic
     - Magic Beam
@@ -163,6 +182,33 @@ Orcus brings Commodus back to life and tasks him with defending the Roman cultur
     - Fire
 
 ## TODO NO MORE
+### 10/06/24
++ Added temple tileset
+
+### 10/06/24
++ Added marble walls, built with 2 marble
++ Enemies can destroy blocks in block piles (full ingredients left when a tower is destroyed), so it is very dangerous to leave towers undefended
+
+---
+
++ Your damage to turn a tower back into ingredients is now separate from enemy damage to towers, and all towers take only 3 hits from the player to destroy, regardless of their health
++ Towers now start at 0 hp and reach their max hp when they are fully built
++ Enemies can now attack towers that are still building
++ Fixed bug where the shopkeeper was giving you more coins than the sell price for blocks
++ Fixed crash that occurred if you tried to change levels while music was fading in or out (oops)
++ Added support for projectiles to travel in arcs, deal area damage, and have pierce
++ Projectiles are now (mostly) data based and should be (mostly) easy to make many different kinds
+
+---
+
++ Added trebuchet tower, which absolutely wrecks because there are no tanky enemies yet
++ There are now 'large' and 'small' towers, all towers can be moved but large towers slow you down more and only small towers can fire while being moved
+
+### 10/05/24
++ Spent time with fam 👌
++ Towers now slowly gain exp when you stand next to them
++ Towers prioritize targets with bread based on distance from point to protect, and they prioritize them over all other targets
+
 ### 10/04/24
 + Music
     + Level

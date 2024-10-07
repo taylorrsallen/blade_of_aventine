@@ -16,10 +16,20 @@ var recipe: BlockPileRecipeData
 @export var liftable: bool = true
 
 var highlighted: bool
+var grabbed: bool
 
 # (({[%%%(({[=======================================================================================================================]}))%%%]}))
-func enable_collision() -> void: collider.collision_layer = 513
-func disable_collision() -> void: collider.collision_layer = 0
+func set_grabbed(active: bool) -> void:
+	if active:
+		grabbed = true
+		_disable_collision()
+	else:
+		grabbed = false
+		_enable_collision()
+
+
+func _enable_collision() -> void: collider.collision_layer = 513
+func _disable_collision() -> void: collider.collision_layer = 0
 
 func drop(_source: Node3D) -> void: pass
 

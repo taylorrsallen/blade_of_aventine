@@ -68,14 +68,14 @@ func _on_item_display_interacted(item_display: ShopItemDisplay, source: Characte
 				pickup.take(self)
 				await get_tree().create_timer(0.1).timeout
 
-func _on_item_display_highlighted(item_display: ShopItemDisplay, source: Character, controller: PlayerController) -> void:
+func _on_item_display_highlighted(item_display: ShopItemDisplay, source: Character, _controller: PlayerController) -> void:
 	if is_instance_valid(source.grabbed_entity):
 		if source.grabbed_entity is BlockPile:
 			dialogue_world_reader.reader.print_string("%s as, I will pay" % [source.grabbed_entity.blocks[0].value * data.sell_rate])
 	else:
 		dialogue_world_reader.reader.print_string("%s as, you will pay" % [item_display.block_data.value * data.buy_rate])
 
-func _on_item_display_unhighlighted(item_display: ShopItemDisplay, source: Character, controller: PlayerController) -> void:
+func _on_item_display_unhighlighted(_item_display: ShopItemDisplay, _source: Character, _controller: PlayerController) -> void:
 	dialogue_world_reader.reader.clear()
 
 func _on_buy_block_from_character(block_data: BlockData, character: Character) -> void:
@@ -88,5 +88,6 @@ func _on_buy_block_from_character(block_data: BlockData, character: Character) -
 		pickup.position = global_position
 		Util.main.level.add_pickup(pickup)
 		pickup.pickup_data = COIN.duplicate()
+		pickup.pickup_data.metadata["coins"] = coin_value
 		pickup.take(character)
 		await get_tree().create_timer(0.1).timeout

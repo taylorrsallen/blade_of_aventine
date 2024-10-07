@@ -1,7 +1,5 @@
 class_name TowerStatsBlueprintData extends Resource
 
-@export var experience_for_next_level: float = 50.0
-
 @export var attack_range: float = 5.0
 ## For towers that swivel. They don't walk.
 @export var move_speed_multiplier: float = 1.0
