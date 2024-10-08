@@ -18,16 +18,25 @@ Orcus brings Commodus back to life and tasks him with defending the Roman cultur
 ## Factions
 - Unwashed Masses
     - Filler: Peasant
-    - Tank: Farmer
+    - Tank: Deserter
     - Fast: Rat
     - Flyer: N/A
     - Boss: Giant Rat
+    - Unique: Senatorae
+        - Low health, lots of money, high damage, medium speed, goes after player instead of bread
 - Franks
     - Filler: Peasant
     - Tank: Soldier
-    - Fast: Barbarian
-    - Flyer: Evil Bird
+    - Fast: Berserker
+    - Flyer: Hawk/Vulture
     - Boss: Knight
+- Roman Revolt
+    - Filler: Soldier
+    - Tank: Centurion
+    - Fast: Scout (on horse)
+    - Flyer: N/A
+    - Boss: Roman General
+    - Unique: Senatorae
 - Scotts
     - s
 - Vandals
@@ -52,10 +61,8 @@ Orcus brings Commodus back to life and tasks him with defending the Roman cultur
 
 
 ## TODO
-- HUD
-    - Coin count
-    - Wave indicator
-    - Bread count
+- Varying coin values are spawned based on the Roman currency
+- Special shiny effect for when an Aureus is dropped
 
 - Barracks that spawn centurions
 - Horn that when interacted signals all ally units to attack enemy bread
@@ -76,7 +83,6 @@ Orcus brings Commodus back to life and tasks him with defending the Roman cultur
 - Book that shows discovered tower recipes and hints at non-secret recipes
 
 - Victory screen
-- Defeat screen
 
 - Difficulty
 
@@ -87,6 +93,32 @@ Orcus brings Commodus back to life and tasks him with defending the Roman cultur
 - Reload sfx (for towers)
 - Random callouts
 - Action callouts ("Stop!" from centurions)
+- Hitting building sound
+
+- Splitscreen
+
+- Orcus
+    - Underworld gates which lead to levels
+    - Some NPCS that whine about their fate
+    - Orcus in his throne
+    - A rack that you can select different scepters from
+
+- Broken towers
+    - Non-functional towers on maps at the start, break down for materials and space
+
+- Tutorial
+    - [Left Click / X (Sony) / A (XBOX)] to INTERACT
+        - Use it to LIFT and PLACE objects!
+    - [Right click / Circle (Sony) / B (XBOX)] to ATTACK
+        - Use it to break down that OLD TOWER!
+    - [E / Square (SONY) / X (XBOX)] to USE
+        - Use it to craft a tower once you have the correct combination of ingredients!
+
+- Fix tower code
+    - Tower data contains:
+        - Foundation model
+        - Y Rotation model
+        - X Rotation model
 
 - Happy dance for allied units upon victory
 
@@ -140,14 +172,14 @@ Orcus brings Commodus back to life and tasks him with defending the Roman cultur
         - Coin
     - Blocks
         - Bronze
-        - Marble
+        - [x] Marble
         - Sinew
         - Oil
         - Magic
     - Tiles
         - Shop kiosk/cart
         - Bread Pile
-        - Pillars
+        - [x] Pillars
         - Temple Walls
         - Peasant Building Walls
         - Roman flags
@@ -186,7 +218,7 @@ Orcus brings Commodus back to life and tasks him with defending the Roman cultur
 - Sprites
     - "Build with E" animated sprite
     - Generic button
-    - Generic menu frame
+    - [x] Generic menu frame
     - HUD icons
     - Generic font
     - Opening splash screen
@@ -207,6 +239,23 @@ Orcus brings Commodus back to life and tasks him with defending the Roman cultur
 + Added temple tileset
 + Added Cypress trees and functionality for spawning 'scenery' entities
 + Added building assembler, which uses the tile sets to assemble buildings in a rectangular shape
++ Added ability to have hidden levels that don't show up in level select
++ There is now a defeat level which will act as a hub and level select (though you can use the menu based level select too)
+
+---
+
++ The game now tracks and saves/loads the levels you have beaten
++ Levels can now be locked until a specific level has been beaten
+
+---
+
++ HUD
+    + Coin count
+    + Wave indicator
+    + Bread count
++ UI has sprite borders now
+
+---
 
 ### 10/06/24
 + Added marble walls, built with 2 marble

@@ -1,6 +1,14 @@
 class_name Level extends Node3D
 
 # (({[%%%(({[=======================================================================================================================]}))%%%]}))
+signal wave_progress_changed(progress: float)
+signal active_wave_icons_changed(icons: Array[Texture2D])
+signal incoming_wave_icons_changed(icons: Array[Texture2D])
+signal next_wave_icons_changed(icons: Array[Texture2D])
+
+signal level_beaten(level_id: int)
+
+# (({[%%%(({[=======================================================================================================================]}))%%%]}))
 const ENEMY_SPAWNER: PackedScene = preload("res://systems/level/entities/enemy_spawner.scn")
 const INTERACTABLE: PackedScene = preload("res://systems/level/entities/interactable/interactable.scn")
 const BLOCK_PILE: PackedScene = preload("res://systems/level/entities/interactable/block_pile/block_pile.scn")
@@ -19,20 +27,7 @@ var LEVEL_DATABASE: LevelDatabase = load("res://resources/levels/level_database.
 
 @export var level_dim: int = 64
 var data: LevelData
-
-@export var entities_r_value_database: Array[int] = [
-	32, # Wood
-	128, # Castle
-	255, # Spawner
-]
-
-@export var terrain_g_value_database: Array[int] = [
-	32, # Dirt
-	0,  # Stone Wall
-	255, # Pillar
-	64, # Stairs
-	48, # Bricks
-]
+var data_id: int
 
 var active_level_image: Image
 var terrain_tiles: PackedInt32Array = PackedInt32Array()
@@ -67,14 +62,19 @@ func _physics_process(delta: float) -> void:
 	if !boss_prep_started && waves.size() == 1 && active_wave.time_to_next_wave - wave_timer < 5.5:
 		boss_prep_started = true
 		SoundManager.fade_background_track(SoundManager.BackgroundTrackLayer.MUSIC_1, 5.0, 31.0, -40.0, true)
-		SoundManager.play_background_track(0, SoundDatabase.SoundType.BGT_MUSIC, SoundManager.BackgroundTrackLayer.MUSIC_0, true, -40.0)
+		SoundManager.play_background_track(data.boss_music_id, SoundDatabase.SoundType.BGT_MUSIC, SoundManager.BackgroundTrackLayer.MUSIC_0, true, -40.0)
 		SoundManager.fade_background_track(SoundManager.BackgroundTrackLayer.MUSIC_0, 5.0, 31.0, 6.0)
 	
 	if active_wave:
 		wave_timer += delta
+		if !waves.is_empty():
+			wave_progress_changed.emit(wave_timer / active_wave.time_to_next_wave)
+		else:
+			wave_progress_changed.emit(0.0)
 		if wave_timer >= active_wave.time_to_next_wave:
 			wave_timer -= active_wave.time_to_next_wave
 			_start_new_wave()
+		
 	elif !waves.is_empty():
 		_start_new_wave()
 	else:
@@ -84,21 +84,44 @@ func _physics_process(delta: float) -> void:
 				SoundManager.play_background_track(1, SoundDatabase.SoundType.BGT_MUSIC, SoundManager.BackgroundTrackLayer.MUSIC_1, true, -40.0)
 				SoundManager.fade_background_track(SoundManager.BackgroundTrackLayer.MUSIC_1, 1.0, 31.0, 0.0, false)
 				completed = true
-				print("Level complete!")
+				level_beaten.emit(data_id)
 
 # (({[%%%(({[=======================================================================================================================]}))%%%]}))
 func _start_new_wave() -> void:
+	var active_wave_icons: Array[Texture2D] = []
+	var incoming_wave_icons: Array[Texture2D] = []
+	var next_wave_icons: Array[Texture2D] = []
+	
 	active_wave = waves.pop_front()
-	if !active_wave: return
+	if !active_wave:
+		active_wave_icons_changed.emit(active_wave_icons)
+		return
 	
 	print("Starting new wave")
 	for batch in active_wave.batches:
 		if !is_instance_valid(faction_spawners[batch.faction_id]): continue
+		active_wave_icons.append(FACTION_DATABASE.database[batch.faction_id].units[batch.unit_id].icon)
+		
 		faction_spawners[batch.faction_id].coins_to_spawn = active_wave.coins_in_wave
 		faction_spawners[batch.faction_id].spawn_count = batch.spawn_count
 		faction_spawners[batch.faction_id].spawn_rate = batch.spawn_rate
 		faction_spawners[batch.faction_id].unit_id = batch.unit_id
 		faction_spawners[batch.faction_id].refresh()
+	
+	
+	if !waves.is_empty():
+		for batch in waves[0].batches:
+			if !is_instance_valid(faction_spawners[batch.faction_id]): continue
+			incoming_wave_icons.append(FACTION_DATABASE.database[batch.faction_id].units[batch.unit_id].icon)
+		
+		if waves.size() > 1:
+			for batch in waves[1].batches:
+				if !is_instance_valid(faction_spawners[batch.faction_id]): continue
+				next_wave_icons.append(FACTION_DATABASE.database[batch.faction_id].units[batch.unit_id].icon)
+	
+	active_wave_icons_changed.emit(active_wave_icons)
+	incoming_wave_icons_changed.emit(incoming_wave_icons)
+	next_wave_icons_changed.emit(next_wave_icons)
 
 # (({[%%%(({[=======================================================================================================================]}))%%%]}))
 func add_ai(faction_id: int, ai: Node) -> void:
@@ -206,14 +229,6 @@ func _get_all_neighbor_indices(i: int) -> Array[int]:
 	
 	return valid_neighbors
 
-#func update_navigation() -> void:
-	#for z in level_dim: for x in level_dim:
-		#var global_coord: Vector3i = Vector3i(x - level_dim * 0.5, 0, z - level_dim * 0.5)
-		#if terrain_grid_map.get_cell_item(global_coord) != 1:
-			#navigation_grid_map.set_cell_item(global_coord, 0)
-		#else:
-			#navigation_grid_map.set_cell_item(global_coord, 4096)
-
 # (({[%%%(({[=======================================================================================================================]}))%%%]}))
 func unload() -> void:
 	SoundManager.erase_background_track(SoundManager.BackgroundTrackLayer.MUSIC_0)
@@ -256,9 +271,10 @@ func unload() -> void:
 	no_waves = false
 
 func load_from_level_id(level_id: int) -> void:
-	load_from_data(LEVEL_DATABASE.database[level_id])
+	_load_from_data(LEVEL_DATABASE.database[level_id])
+	data_id = level_id
 
-func load_from_data(level_data: LevelData) -> void:
+func _load_from_data(level_data: LevelData) -> void:
 	loading = true
 	
 	unload()
@@ -278,7 +294,7 @@ func load_from_data(level_data: LevelData) -> void:
 	
 	Util.main.game_started.emit()
 	
-	SoundManager.play_background_track(3, SoundDatabase.SoundType.BGT_MUSIC, SoundManager.BackgroundTrackLayer.MUSIC_1, true, -16.0)
+	SoundManager.play_background_track(level_data.music_id, SoundDatabase.SoundType.BGT_MUSIC, SoundManager.BackgroundTrackLayer.MUSIC_1, true, -16.0)
 	started = true
 	loading = false
 
@@ -290,7 +306,6 @@ func load_layout_from_image(image: Image) -> void:
 			var i: int = z * level_dim + x
 			var tile_color: Color = image.get_pixel(x, z)
 			var terrain_tile_id: int = get_terrain_tile_id_from_color(tile_color)
-			#var cell_height: int = tile_color.b8
 			var global_coord: Vector3i = Vector3i(x - level_dim * 0.5, 0.0, z - level_dim * 0.5)
 			
 			set_terrain_tile_at_local_coord(terrain_tile_id, Vector2i(x, z))

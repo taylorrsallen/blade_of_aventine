@@ -23,6 +23,7 @@ enum Perspective {
 const SPLITSCREEN_VIEW_SCN: PackedScene = preload("res://systems/controller/player/splitscreen_view.scn")
 const SHADER_VIEW_SCN: PackedScene = preload("res://systems/controller/player/shader_view.scn")
 const CAMERA_RIG: PackedScene = preload("res://systems/camera/camera_rig.scn")
+const HUD_GUI: PackedScene = preload("res://systems/gui/hud/hud.scn")
 
 const START_MENU: PackedScene = preload("res://systems/gui/menus/start_menu.scn")
 
@@ -70,6 +71,7 @@ var selection_position: Vector3
 @onready var hud_view_layer: CanvasLayer = $HUDViewLayer
 @onready var hud_view: Control = $HUDViewLayer/HUDView
 @onready var menu_view: Control = $HUDViewLayer/MenuView
+var hud: HUDGui
 
 @export var camera_rig: CameraRig
 
@@ -114,10 +116,7 @@ func init() -> void:
 func _physics_process(delta: float) -> void:
 	if Util.main.level.started && !Util.main.level.no_waves && game_resources.bread == 0:
 		Util.main.level.unload()
-		SoundManager.erase_background_track(SoundManager.BackgroundTrackLayer.MUSIC_0)
-		SoundManager.erase_background_track(SoundManager.BackgroundTrackLayer.MUSIC_1)
-		SoundManager.play_background_track(4, SoundDatabase.SoundType.BGT_MUSIC, SoundManager.BackgroundTrackLayer.MUSIC_0, true, -40.0)
-		SoundManager.fade_background_track(SoundManager.BackgroundTrackLayer.MUSIC_0, 1.0, 31.0, 0.0, false)
+		Util.main.level.load_from_level_id(1)
 	
 	_update_movement_input()
 	
@@ -268,11 +267,11 @@ func update_area_query(results: Array[PhysicsBody3D]) -> void:
 # (({[%%%(({[=======================================================================================================================]}))%%%]}))
 func _update_hud() -> void:
 	if !game_resources: return
-	DebugDraw2D.set_text("Coins: ", game_resources.coins, 0, Color.GOLD)
-	DebugDraw2D.set_text("Bread on Map: ", game_resources.bread, 1, Color.SANDY_BROWN)
-	if Util.main.level.faction_bread_piles.is_empty(): return
-	var bread_pile: BreadPile = Util.main.level.faction_bread_piles[0]
-	if is_instance_valid(bread_pile): DebugDraw2D.set_text("Bread in Pile: ", bread_pile.bread_count, 2, Color.SANDY_BROWN)
+	hud.coins_label.text = str(game_resources.coins)
+	hud.bread_label.text = str(game_resources.bread)
+	#if Util.main.level.faction_bread_piles.is_empty(): return
+	#var bread_pile: BreadPile = Util.main.level.faction_bread_piles[0]
+	#if is_instance_valid(bread_pile): DebugDraw2D.set_text("Bread in Pile: ", bread_pile.bread_count, 2, Color.SANDY_BROWN)
 
 # (({[%%%(({[=======================================================================================================================]}))%%%]}))
 func _update_character_input(_delta: float) -> void:
@@ -550,6 +549,14 @@ func spawn_camera_rig() -> void:
 	#splitscreen_view.sub_viewport.add_child(camera_rig)
 	camera_view_layer.add_child(camera_rig)
 	_init_camera_rig()
+	
+	if is_instance_valid(hud): hud.queue_free()
+	hud = HUD_GUI.instantiate()
+	Util.main.level.wave_progress_changed.connect(hud._on_wave_progress_changed)
+	Util.main.level.active_wave_icons_changed.connect(hud._on_active_wave_icons_changed)
+	Util.main.level.incoming_wave_icons_changed.connect(hud._on_incoming_wave_icons_changed)
+	Util.main.level.next_wave_icons_changed.connect(hud._on_next_wave_icons_changed)
+	hud_view.add_child(hud)
 
 # (({[%%%(({[=======================================================================================================================]}))%%%]}))
 # INPUT

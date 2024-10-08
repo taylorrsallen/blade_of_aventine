@@ -21,8 +21,8 @@ enum TileSetType {
 @export var id: int
 
 # (({[%%%(({[=======================================================================================================================]}))%%%]}))
-func _physics_process(delta: float) -> void:
-	DebugDraw3D.draw_aabb(AABB(global_position, Vector3(building_dims.x, 1.0, building_dims.y)), Color.FLORAL_WHITE, delta)
+#func _physics_process(delta: float) -> void:
+	#DebugDraw3D.draw_aabb(AABB(global_position, Vector3(building_dims.x, 1.0, building_dims.y)), Color.FLORAL_WHITE, delta)
 
 # (({[%%%(({[=======================================================================================================================]}))%%%]}))
 func update_dims() -> void:

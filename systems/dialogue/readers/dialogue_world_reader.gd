@@ -5,6 +5,7 @@ signal finished_reading()
 
 # (({[%%%(({[=======================================================================================================================]}))%%%]}))
 @onready var label_3d: Label3D = $Label3D
+@onready var mesh_instance_3d: MeshInstance3D = $MeshInstance3D
 @onready var reader: DialogueReader = $DialogueReader
 
 # (({[%%%(({[=======================================================================================================================]}))%%%]}))
@@ -14,6 +15,7 @@ func _ready() -> void:
 
 func _physics_process(_delta: float) -> void:
 	label_3d.text = reader.active_text
+	mesh_instance_3d.mesh.size.x = label_3d.text.length() * 0.11
 
 # (({[%%%(({[=======================================================================================================================]}))%%%]}))
 func _on_sound_queue(sound_id: int, sound_type: int, volume_db: float, pitch: float) -> void:
