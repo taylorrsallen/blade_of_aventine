@@ -32,6 +32,25 @@ Orcus brings Commodus back to life and tasks him with defending the Roman cultur
     - s
 - Vandals
 
+## TILE IDS
+0. temple_roof_border_corner
+6. temple_roof_border_wall_01
+7. temple_roof_border_wall_00
+8. temple_roof_border_end_00
+9. temple_roof_border_end_01
+10. temple_roof_border_inner
+11. temple_roof_border_inner_wall
+12. temple_roof_border_center
+13. temple_roof
+14. temple_roof_end
+15. temple_roof_center
+16. temple_roof_border_end_00_inverse
+17. temple_roof_border_end_01_inverse
+18. temple_roof_border_inner_inverse
+19. temple_roof_inverse
+20. temple_roof_end_inverse
+
+
 ## TODO
 - HUD
     - Coin count
@@ -181,9 +200,13 @@ Orcus brings Commodus back to life and tasks him with defending the Roman cultur
     - Bread get
     - Fire
 
+
+
 ## TODO NO MORE
-### 10/06/24
+### 10/07/24
 + Added temple tileset
++ Added Cypress trees and functionality for spawning 'scenery' entities
++ Added building assembler, which uses the tile sets to assemble buildings in a rectangular shape
 
 ### 10/06/24
 + Added marble walls, built with 2 marble

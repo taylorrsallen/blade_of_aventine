@@ -61,6 +61,7 @@ func _physics_process(delta: float) -> void:
 # (({[%%%(({[=======================================================================================================================]}))%%%]}))
 func _update_movement(delta: float) -> void:
 	if character.eating: return
+	if Util.main.level.loading || !Util.main.level.started: return
 	
 	direction_drift = Vector2(clampf(direction_drift.x + (randf() - 0.5) * 0.01, -1.5, 1.5), clampf(direction_drift.y + (randf() - 0.5) * 0.01, -1.5, 1.5))
 	

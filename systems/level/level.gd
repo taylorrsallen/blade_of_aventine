@@ -5,10 +5,13 @@ const ENEMY_SPAWNER: PackedScene = preload("res://systems/level/entities/enemy_s
 const INTERACTABLE: PackedScene = preload("res://systems/level/entities/interactable/interactable.scn")
 const BLOCK_PILE: PackedScene = preload("res://systems/level/entities/interactable/block_pile/block_pile.scn")
 const BREAD_PILE: PackedScene = preload("res://systems/level/entities/interactable/bread_pile/bread_pile.scn")
+const BUILDING_ASSEMBLER: PackedScene = preload("res://systems/level/entities/building/building_assembler.scn")
 
 const TERRAIN_TILE_DATABASE: TerrainTileDatabase = preload("res://resources/terrain_tiles/terrain_tile_database.res")
+const DECORATION_TILE_DATABASE: DecorationTileDatabase = preload("res://resources/decoration_tiles/decoration_tile_database.res")
 const BLOCK_DATABASE: BlockDatabase = preload("res://resources/blocks/block_database.res")
 const FACTION_DATABASE: FactionDatabase = preload("res://resources/factions/faction_database.res")
+const SCENERY_ENTITY_DATABASE: SceneryEntityDatabase = preload("res://resources/scenery_entities/scenery_entity_database.res")
 var LEVEL_DATABASE: LevelDatabase = load("res://resources/levels/level_database.res")
 
 # (({[%%%(({[=======================================================================================================================]}))%%%]}))
@@ -40,6 +43,8 @@ var faction_base_local_coords: Array[Vector2i] = []
 var faction_spawners: Array[EnemySpawner] = []
 var faction_bread_piles: Array[BreadPile] = []
 
+var building_tiles: Array[Vector3i] = []
+
 var player_spawn_local_coord: Vector2i = Vector2i.ZERO
 
 var active_wave: LevelWaveData
@@ -54,9 +59,7 @@ var no_waves: bool
 
 # (({[%%%(({[=======================================================================================================================]}))%%%]}))
 func _ready() -> void:
-	for i in FACTION_DATABASE.database.size():
-		faction_flow_fields.append(PackedVector2Array())
-		faction_base_local_coords.append(Vector2i.ZERO)
+	unload()
 
 func _physics_process(delta: float) -> void:
 	if loading || no_waves: return
@@ -109,6 +112,9 @@ func add_tile_entity(tile_entity: Interactable) -> void:
 
 func add_pickup(pickup: Pickup) -> void:
 	$Pickups.add_child(pickup)
+
+func add_building(building: Node3D) -> void:
+	$Buildings.add_child(building)
 
 # (({[%%%(({[=======================================================================================================================]}))%%%]}))
 func update_flow_field(target_team: int) -> void:
@@ -208,12 +214,6 @@ func _get_all_neighbor_indices(i: int) -> Array[int]:
 		#else:
 			#navigation_grid_map.set_cell_item(global_coord, 4096)
 
-func global_coord_from_local_coord(local_coord: Vector2i) -> Vector3:
-	return Vector3(local_coord.x - level_dim * 0.5, 0.0, local_coord.y - level_dim * 0.5)
-
-func centered_global_coord_from_local_coord(local_coord: Vector2i) -> Vector3:
-	return Vector3(local_coord.x - level_dim * 0.5 + 0.5, 0.0, local_coord.y - level_dim * 0.5 + 0.5)
-
 # (({[%%%(({[=======================================================================================================================]}))%%%]}))
 func unload() -> void:
 	SoundManager.erase_background_track(SoundManager.BackgroundTrackLayer.MUSIC_0)
@@ -223,11 +223,21 @@ func unload() -> void:
 	active_level_image = null
 	terrain_grid_map.clear()
 	terrain_tiles.clear()
+	terrain_tiles.resize(level_dim * level_dim)
+	building_tiles.clear()
+	
+	faction_flow_fields.clear()
+	faction_base_local_coords.clear()
+	factions_in_level.clear()
+	for i in FACTION_DATABASE.database.size():
+		faction_flow_fields.append(PackedVector2Array())
+		faction_base_local_coords.append(Vector2i.ZERO)
 	
 	for character in $Allies.get_children(): character.queue_free()
 	for character in $Enemies.get_children(): character.queue_free()
 	for tile_entity in $TileEntities.get_children(): tile_entity.queue_free()
 	for pickup in $Pickups.get_children(): pickup.queue_free()
+	for building in $Buildings.get_children(): building.queue_free()
 	
 	for spawner in faction_spawners: if is_instance_valid(spawner): spawner.queue_free()
 	faction_spawners.clear()
@@ -277,15 +287,16 @@ func load_layout_from_image(image: Image) -> void:
 	
 	for z in level_dim:
 		for x in level_dim:
+			var i: int = z * level_dim + x
 			var tile_color: Color = image.get_pixel(x, z)
 			var terrain_tile_id: int = get_terrain_tile_id_from_color(tile_color)
 			#var cell_height: int = tile_color.b8
 			var global_coord: Vector3i = Vector3i(x - level_dim * 0.5, 0.0, z - level_dim * 0.5)
 			
-			terrain_tiles.append(terrain_tile_id)
-			terrain_grid_map.set_cell_item(global_coord, TERRAIN_TILE_DATABASE.database[terrain_tile_id].tile_mesh_id)
-			
+			set_terrain_tile_at_local_coord(terrain_tile_id, Vector2i(x, z))
 			spawn_entity_from_color(tile_color, Vector2i(x, z))
+			spawn_building_from_color(tile_color, Vector2i(x, z))
+			
 		await get_tree().create_timer(0.00001).timeout
 	
 	Util.main.spawn_point = Vector3(player_spawn_local_coord.x - level_dim * 0.5, 0.0, player_spawn_local_coord.y - level_dim * 0.5)
@@ -304,11 +315,11 @@ func load_layout_from_image(image: Image) -> void:
 			bread_pile.bread_count = faction_game_data.starting_bread_count
 			faction_bread_piles[faction_game_data.faction_id] = bread_pile
 			add_child(bread_pile)
-
-func get_terrain_tile_id_from_color(color: Color) -> int:
-	for i in TERRAIN_TILE_DATABASE.database.size():
-		if color.g8 == TERRAIN_TILE_DATABASE.database[i].g_value: return i
-	return 0
+	
+	for building in $Buildings.get_children():
+		if !(building is BuildingAssembler): continue
+		building.update_dims()
+		building.assemble()
 
 func spawn_entity_from_color(color: Color, local_coord: Vector2i) -> void:
 	var block_pile_spawn: int = -1
@@ -330,7 +341,7 @@ func spawn_entity_from_color(color: Color, local_coord: Vector2i) -> void:
 			#tower.position = global_coord + Vector3(0.5, -5.0, 0.5)
 			#tower.protect_position = true
 			#add_tile_entity(tower)
-
+	
 	if block_pile_spawn != -1:
 		var block_pile: Interactable = BLOCK_PILE.instantiate()
 		block_pile.position = global_coord
@@ -350,12 +361,87 @@ func spawn_entity_from_color(color: Color, local_coord: Vector2i) -> void:
 		spawner.position.y = 0.5
 		faction_spawners[faction_base_id] = spawner
 		add_child(spawner)
+	
+	if color.b8 < 128: return
+	var scenery_entity_id: int = color.b8 - 128
+	var scenery_entity: Node3D = SCENERY_ENTITY_DATABASE.database[scenery_entity_id].instantiate()
+	scenery_entity.position = global_coord
+	add_tile_entity(scenery_entity)
+
+func spawn_building_from_color(color: Color, local_coord: Vector2i) -> void:
+	var building_id: int = color.b8
+	if building_id == 0 || building_id > 127: return
+	
+	var assembler: BuildingAssembler = null
+	for building in $Buildings.get_children():
+		if !(building is BuildingAssembler): continue
+		if building.id == building_id:
+			assembler = building
+			break
+	
+	if !is_instance_valid(assembler):
+		assembler = BUILDING_ASSEMBLER.instantiate()
+		assembler.id = building_id
+		add_building(assembler)
+	
+	if color.r8 == 1:
+		assembler.global_position = global_coord_from_local_coord(local_coord)
+	elif color.r8 == 2:
+		assembler.end_position = global_coord_from_local_coord(local_coord)
+	elif color.r8 > 2 && color.r8 < 7:
+		# 3 = 0
+		# 4 = 1
+		# 5 = 2
+		# 6 = 3
+		assembler.building_orientation = color.r8 - 3
 
 # (({[%%%(({[=======================================================================================================================]}))%%%]}))
+func set_terrain_tile_at_local_coord(tile_id: int, local_coord: Vector2i, orientation: int = 0) -> void:
+	var i: int = index_from_local_coord(local_coord)
+	if i < 0 || i > level_dim * level_dim - 1: return
+	terrain_tiles[i] = tile_id
+	terrain_grid_map.set_cell_item(global_coord_from_local_coord(local_coord), TERRAIN_TILE_DATABASE.database[tile_id].tile_mesh_id, tile_orientation_to_godot_orientation(orientation))
+
+func set_terrain_tile_at_global_coord(tile_id: int, global_coord: Vector3, orientation: int = 0) -> void:
+	set_terrain_tile_at_local_coord(tile_id, local_coord_from_global_coord(global_coord), orientation)
+
+func set_decoration_tile_at_local_coord(tile_id: int, local_coord: Vector2i, height: int, orientation: int = 0) -> void:
+	terrain_grid_map.set_cell_item(global_coord_from_local_coord(local_coord) + Vector3.UP * height, DECORATION_TILE_DATABASE.database[tile_id].tile_mesh_id, tile_orientation_to_godot_orientation(orientation))
+
+func set_decoration_tile_at_global_coord(tile_id: int, global_coord: Vector3, height: int, orientation: int = 0) -> void:
+	set_decoration_tile_at_local_coord(tile_id, local_coord_from_global_coord(global_coord), height, orientation)
+
 func get_terrain_id_at_global_coord(global_coord: Vector3) -> int:
 	var local_coord: Vector2i = Vector2i(floorf(global_coord.x) + level_dim * 0.5, floorf(global_coord.z) + level_dim * 0.5)
 	var i: int = local_coord.y * level_dim + local_coord.x
 	return terrain_tiles[i]
+
+func get_terrain_tile_id_from_color(color: Color) -> int:
+	for i in TERRAIN_TILE_DATABASE.database.size():
+		if color.g8 == TERRAIN_TILE_DATABASE.database[i].g_value: return i
+	return 0
+
+func index_from_local_coord(local_coord: Vector2i) -> int:
+	return local_coord.y * level_dim + local_coord.x
+
+func index_from_global_coord(global_coord: Vector3) -> int:
+	return index_from_local_coord(local_coord_from_global_coord(global_coord))
+
+func local_coord_from_global_coord(global_coord: Vector3) -> Vector2i:
+	return Vector2i(floorf(global_coord.x) + level_dim * 0.5, floorf(global_coord.z) + level_dim * 0.5)
+
+func global_coord_from_local_coord(local_coord: Vector2i) -> Vector3:
+	return Vector3(local_coord.x - level_dim * 0.5, 0.0, local_coord.y - level_dim * 0.5)
+
+func centered_global_coord_from_local_coord(local_coord: Vector2i) -> Vector3:
+	return Vector3(local_coord.x - level_dim * 0.5 + 0.5, 0.0, local_coord.y - level_dim * 0.5 + 0.5)
+
+func tile_orientation_to_godot_orientation(tile_orientation: int) -> int:
+	match tile_orientation:
+		1: return 10
+		2: return 16
+		3: return 22
+		_: return 0
 
 # (({[%%%(({[=======================================================================================================================]}))%%%]}))
 func _on_faction_defeated(bread_pile: BreadPile) -> void:

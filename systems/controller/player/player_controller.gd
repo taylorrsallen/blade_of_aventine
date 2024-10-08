@@ -514,6 +514,7 @@ func _init_camera_rig() -> void:
 		camera_rig.connect_animations(character)
 	
 	camera_rig.make_current()
+	#camera_rig.zoom = 20.0
 	camera_rig.zoom = 2.675
 	
 	if perspective == Perspective.FPS:

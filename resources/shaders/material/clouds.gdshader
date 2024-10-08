@@ -26,14 +26,12 @@ void fragment() {
         ALPHA =  smoothstep(threshold - 0.3, threshold + 0.3, combinedNoise).a;
 		//
 		//ALPHA_HASH_SCALE = 0.0;
-    }
-    else {
+    } else {
         // Creating hard transitions
         ALBEDO = combinedNoise.rgb * brightness;
         if (combinedNoise.r < threshold) {
             ALPHA = 0.0;
-        }
-        else {
+        } else {
             ALPHA = 1.0;
         }
     }
