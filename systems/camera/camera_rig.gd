@@ -57,7 +57,7 @@ func _physics_process(delta: float) -> void:
 	if perspective == PlayerController.Perspective.FPS:
 		update_first_person_position(delta)
 	else:
-		update_third_person_position(delta)
+		update_third_person_position(delta * 20.0)
 	
 	camera_3d.fov = lerpf(camera_3d.fov, base_fov + fov_mod, 4.0 * delta)
 
@@ -98,10 +98,10 @@ func get_look_up_down_scalar() -> float:
 
 # ////////////////////////////////////////////////////////////////////////////////////////////////
 func snap_to_position(_position: Vector3, _delta: float) -> void:
-	global_position = _position + anchor_offset
+	global_position = lerp(global_position, _position + anchor_offset, _delta)
 
 func snap_to_node(node: Node3D, _delta: float) -> void:
-	global_position = node.global_position + node.basis.x * anchor_offset.x + node.basis.y * anchor_offset.y + -node.basis.z * anchor_offset.z
+	global_position = lerp(global_position, node.global_position + node.basis.x * anchor_offset.x + node.basis.y * anchor_offset.y + -node.basis.z * anchor_offset.z, _delta)
 
 func set_anchor_node(_anchor_node: Node3D) -> void:
 	anchor_node = _anchor_node

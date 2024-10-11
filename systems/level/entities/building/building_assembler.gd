@@ -33,7 +33,6 @@ func update_dims() -> void:
 func assemble() -> void:
 	for z in building_dims.y: for x in building_dims.x:
 		var global_coord: Vector3 = global_position.floor() + Vector3(x, 0.0, z)
-		var i: int = Util.main.level.index_from_global_coord(global_coord)
 		var tile_set: BuildingTileSetData = TILE_SETS[building_tile_set]
 		
 		var corner_terrain_id: int = 2

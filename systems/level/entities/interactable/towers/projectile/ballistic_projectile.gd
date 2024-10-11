@@ -17,7 +17,9 @@ func _physics_process(delta: float) -> void:
 		global_position.y = data.curve.sample(distance_percent) * 3.0
 		global_position.y += lerpf(start_position.y, 0.0, distance_percent)
 		
-		var temp: Vector3 = Vector3(start_position.x, 0.0, start_position.z)
+		rotate_z(data.speed * delta)
+		
+		#var temp: Vector3 = Vector3(start_position.x, 0.0, start_position.z)
 		#DebugDraw3D.draw_line(temp + flat_direction * start_distance, temp + flat_direction * start_distance + Vector3.UP * 5.0, Color.RED, delta)
 		
 		if distance >= start_distance && $DamagingArea3D.active: _on_damage_dealt()

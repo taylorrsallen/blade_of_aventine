@@ -26,3 +26,5 @@ enum Trajectory {
 
 @export var hit_sounds: SoundPoolData
 @export var hit_effect: PackedScene
+
+@export var model_scene: PackedScene

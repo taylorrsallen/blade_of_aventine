@@ -10,8 +10,8 @@ const MAIN_MENU: PackedScene = preload("res://systems/gui/menus/main_menu.scn")
 const GAME_PROGRESS_DATA_PATH: String = "user://game_progress.tres"
 
 # (({[%%%(({[=======================================================================================================================]}))%%%]}))
-var spawn_point: Vector3 = Vector3.ZERO
 @onready var level: Level = $Level
+var spawn_point: Vector3 = Vector3.ZERO
 var game_progress_data: GameProgressData
 
 # (({[%%%(({[=======================================================================================================================]}))%%%]}))
@@ -28,7 +28,6 @@ func _ready() -> void:
 	game_started.emit()
 	
 	level.load_from_level_id(1)
-	
 	
 	#var terrain_model: Node3D = level.get_terrain_model_scene(level.LEVEL_DATABASE.database[1])
 	#terrain_model.position.y = 0.5

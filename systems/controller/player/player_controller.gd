@@ -53,6 +53,7 @@ var previous_cursor_pos: Vector2
 var focus_world_entity: Node3D
 var focus_world_pos: Vector3
 var can_interact: bool
+var focus_range: float = 1.5
 
 @onready var selection_cursor: Node3D = $SelectionCursor
 @onready var aventine_highlighter: Node3D = $aventine_highlighter
@@ -112,6 +113,7 @@ func init() -> void:
 	
 	spawn_camera_rig()
 	_assign_default_keyboard_controls(0, 0)
+	set_cursor_captured()
 
 func _physics_process(delta: float) -> void:
 	if Util.main.level.started && !Util.main.level.no_waves && game_resources.bread == 0:
@@ -126,7 +128,7 @@ func _physics_process(delta: float) -> void:
 	if !get_window().has_focus():
 		set_cursor_visible()
 	elif menu_view.get_children().is_empty():
-		set_cursor_captured()
+		if is_flag_on(PlayerControllerFlag.CURSOR_VISIBLE): set_cursor_captured()
 	else:
 		set_cursor_visible()
 	
@@ -160,7 +162,7 @@ func _physics_process(delta: float) -> void:
 		#DebugDraw3D.draw_aabb(AABB(selection_position, Vector3.ONE), Color.ORANGE, delta)
 		#DebugDraw3D.draw_line(selection_position, selection_position + Vector3.UP * 5.0, Color.ORANGE, 0.016)
 		
-		AreaQueryManager.request_area_query(self, character.global_position, 1.0, 512)
+		AreaQueryManager.request_area_query(self, character.global_position, focus_range * 2.0, 512)
 		
 		for pickup_body in AreaQueryManager.query_area(character.global_position, 5.0, 8):
 			pickup_body.get_parent().take(character)
@@ -172,9 +174,6 @@ func _physics_process(delta: float) -> void:
 		
 		_update_character_input(delta)
 		_update_hud()
-		
-		character.set_yaw_look_basis(camera_rig.get_yaw_rotation())
-		character.set_pitch_look_basis(camera_rig.get_pitch_rotation())
 		
 		if perspective == Perspective.FPS:
 			character.face_direction(camera_rig.get_yaw_forward(), delta)
@@ -190,7 +189,7 @@ func _unhandled_input(event: InputEvent) -> void:
 	if event is InputEventMouseMotion: look_input = Vector2(-event.relative.x, -event.relative.y)
 
 func _dance_for_me(delta: float) -> void:
-	if is_instance_valid(focused_interactable) && focused_interactable is TowerBase && focused_interactable.built:
+	if !character.grabbed_entity && is_instance_valid(focused_interactable) && focused_interactable is TowerBase && focused_interactable.built:
 		character.body.set_dancing(true)
 		dance_exp_timer += delta
 		if dance_exp_timer >= dance_exp_cd:
@@ -200,15 +199,20 @@ func _dance_for_me(delta: float) -> void:
 		character.body.set_dancing(false)
 
 func _update_selection() -> void:
-	selection_position = (character.global_position + camera_rig.get_yaw_forward()).floor()
-	selection_position.y = 0.0
-	
+	var selection_out_of_bounds: bool = false
 	var show_craft_billboard: bool = false
 	var show_highlighter: bool = false
 	var show_selection_cursor: bool = false
 	
+	selection_position = (character.global_position + camera_rig.get_yaw_forward()).floor()
+	if Util.main.level.is_global_coord_in_bounds(selection_position):
+		selection_position.y = Util.main.level.get_placement_height_at_global_coord(selection_position)
+	else:
+		selection_out_of_bounds = true
+		selection_position.y = 0.0
+	
 	if is_instance_valid(character.grabbed_entity):
-		selection_interactable = get_interactable_from_global_coord(selection_position)
+		selection_interactable = Util.main.level.get_interactable_from_global_coord(selection_position)
 		
 		if is_instance_valid(focused_interactable) && focused_interactable is ShopItemDisplay && character.grabbed_entity is BlockPile:
 			show_highlighter = true
@@ -230,7 +234,10 @@ func _update_selection() -> void:
 	
 	craft_billboard.visible = show_craft_billboard
 	aventine_highlighter.visible = show_highlighter
-	selection_cursor.visible = show_selection_cursor
+	if !selection_out_of_bounds:
+		selection_cursor.visible = show_selection_cursor
+	else:
+		selection_cursor.visible = false
 
 # (({[%%%(({[=======================================================================================================================]}))%%%]}))
 func is_flag_on(flag: PlayerControllerFlag) -> bool: return Util.is_flag_on(flags, flag)
@@ -257,7 +264,8 @@ func update_area_query(results: Array[PhysicsBody3D]) -> void:
 	var closest_distance: float = 100.0
 	for interactable in interactables:
 		#DebugDraw3D.draw_line(interactable.global_position, interactable.global_position + Vector3.UP * 5.0, Color.RED, 0.016)
-		var distance: float = character.global_position.distance_to(interactable.global_position)
+		var distance: float = Vector3(character.global_position.x, 0.0, character.global_position.z).distance_to(Vector3(interactable.global_position.x, 0.0, interactable.global_position.z))
+		if distance > focus_range: continue
 		if distance < closest_distance:
 			new_focused_interactable = interactable
 			closest_distance = distance
@@ -307,37 +315,27 @@ func _primary() -> void:
 				if focused_interactable.built:
 					SoundManager.play_3d_sfx(3, SoundDatabase.SoundType.SFX_FOLEY, character.global_position + Vector3.UP * 0.5)
 					character.grab_entity(focused_interactable)
-			elif focused_interactable.liftable:
+			elif focused_interactable.interactable_data.liftable:
 				character.grab_entity(focused_interactable)
 			else:
 				focused_interactable.interact(character, self)
 	else:
-		var sold_item: bool = false
-		if is_instance_valid(focused_interactable):
-			if focused_interactable is ShopItemDisplay && character.grabbed_entity is BlockPile:
-				var grabbed_block_pile: BlockPile = character.drop_grabbed_entity()
-				focused_interactable.give_coins_for_block(grabbed_block_pile.blocks[0], character)
-				grabbed_block_pile.queue_free()
-				sold_item = true
-		
-		if !sold_item:
-			if is_instance_valid(selection_interactable):
-				if selection_interactable is BlockPile && character.grabbed_entity is BlockPile:
-					var grabbed_block_pile: BlockPile = character.drop_grabbed_entity()
-					selection_interactable.add_block_pile(grabbed_block_pile)
-			else:
-				var entity: Interactable = character.drop_grabbed_entity()
-				entity.global_position = selection_position + Vector3(0.5, 0.0, 0.5)
-		#print("Terrain: %s" % Util.main.level.get_terrain_id_at_global_coord(selection_position))
-		
-	
-	character.use_primary()
+		_place_grabbed_entity()
 
 func _secondary() -> void:
-	if is_instance_valid(character.grabbed_entity): return
-	if !is_instance_valid(focused_interactable): return
-	if focused_interactable is TowerBase && focused_interactable.built:
-		focused_interactable.deal_scepter_damage()
+	if is_instance_valid(character.grabbed_entity):
+		if character.grabbed_entity.interactable_data.throwable:
+			var entity_to_throw: Interactable = character.drop_grabbed_entity()
+			entity_to_throw.velocity = -character.body_center_pivot.global_basis.z * 10.0 + Vector3.UP * 3.0
+			entity_to_throw.set_tumbling(true)
+			entity_to_throw.collider_that_threw_me = character
+			return
+	elif character.try_attack():
+		if !is_instance_valid(focused_interactable): return
+		if focused_interactable is TowerBase && focused_interactable.built:
+			focused_interactable.deal_scepter_damage()
+		elif focused_interactable.has_method("deal_scepter_damage"):
+			focused_interactable.deal_scepter_damage()
 
 func _interact() -> void:
 	if is_instance_valid(character.grabbed_entity): return
@@ -346,11 +344,26 @@ func _interact() -> void:
 		focused_interactable.try_craft()
 
 # (({[%%%(({[=======================================================================================================================]}))%%%]}))
-func get_interactable_from_global_coord(global_coord: Vector3) -> Interactable:
-	var entities_in_selection: Array[PhysicsBody3D] = AreaQueryManager.query_area(global_coord + Vector3(0.5, 0.0, 0.5), 0.1, 512)
-	if !entities_in_selection.is_empty(): return entities_in_selection[0].get_parent()
-	return null
+func _place_grabbed_entity() -> void:
+	var sold_item: bool = false
+	if is_instance_valid(focused_interactable):
+		if focused_interactable is ShopItemDisplay && character.grabbed_entity is BlockPile:
+			var grabbed_block_pile: BlockPile = character.drop_grabbed_entity()
+			focused_interactable.give_coins_for_block(grabbed_block_pile.blocks[0], character)
+			grabbed_block_pile.queue_free()
+			sold_item = true
+	
+	if !sold_item:
+		if is_instance_valid(selection_interactable):
+			if selection_interactable is BlockPile && character.grabbed_entity is BlockPile:
+				var grabbed_block_pile: BlockPile = character.drop_grabbed_entity()
+				selection_interactable.add_block_pile(grabbed_block_pile)
+		elif Util.main.level.is_global_coord_in_bounds(selection_position) && !Util.main.level.get_terrain_tile_at_global_coord(selection_position).blocks_entity_placement:
+			var place_at_global_coord: Vector3 = selection_position + Vector3(0.5, 0.0, 0.5)
+			var entity: Interactable = character.drop_grabbed_entity()
+			Util.main.level.place_interactable_at_global_coord(place_at_global_coord, entity)
 
+# (({[%%%(({[=======================================================================================================================]}))%%%]}))
 func _update_movement_input() -> void:
 	desired_facing = camera_rig.get_yaw_forward()
 	
@@ -411,6 +424,7 @@ func set_cursor_visible() -> void:
 
 func set_cursor_captured() -> void:
 	Input.mouse_mode = Input.MOUSE_MODE_CONFINED_HIDDEN
+	get_viewport().warp_mouse(get_viewport().size * 0.5)
 	set_flag_off(PlayerControllerFlag.CURSOR_VISIBLE)
 
 # (({[%%%(({[=======================================================================================================================]}))%%%]}))
@@ -425,15 +439,25 @@ func respawn_character() -> void:
 	character.position = Util.main.spawn_point
 	character.team = 0
 	character.pickup_received.connect(_on_pickup_received)
+	character.entered_gateway.connect(_on_entered_gateway)
+	character.killed.connect(_on_character_killed)
 	
 	add_child(character)
 	_init_camera_rig()
+
+func _on_character_killed() -> void:
+	print("You died.")
+	camera_rig.anchor_position = character.global_position + Vector3.UP
 
 func _on_pickup_received(pickup: PickupData) -> void:
 	if pickup.metadata.has("coins"): game_resources.coins += pickup.metadata["coins"]
 	if pickup.metadata.has("bread"):
 		if is_instance_valid(Util.main.level.faction_bread_piles[0]):
 			Util.main.level.faction_bread_piles[0].bread_count += pickup.metadata["bread"]
+
+func _on_entered_gateway(gateway_data: GatewayData) -> void:
+	print("Entered gateway with destination %s" % gateway_data.destination_level_id)
+	Util.main.level.load_from_level_id(gateway_data.destination_level_id)
 
 # (({[%%%(({[=======================================================================================================================]}))%%%]}))
 # GAME START

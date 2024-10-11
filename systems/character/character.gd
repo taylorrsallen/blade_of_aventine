@@ -6,6 +6,7 @@ signal landed(force: float)
 signal killed()
 signal pickup_received(pickup: PickupData)
 signal finished_eating()
+signal entered_gateway(gateway_data: GatewayData)
 
 # (({[%%%(({[=======================================================================================================================]}))%%%]}))
 enum CharacterFlag {
@@ -32,21 +33,16 @@ const PICKUP: PackedScene = preload("res://systems/level/entities/pickup/pickup.
 ## COMPOSITION
 #@onready var character_actions: CharacterActions = $CharacterActions
 @onready var nav_collider: CollisionShape3D = $NavCollider
+@onready var spring_ray: RayCast3D = $NavCollider/SpringRay
 
+@onready var body: CharacterBody
 @onready var body_container: Node3D = $BodyContainer
 @onready var body_center_pivot: Node3D = $BodyContainer/BodyCenterPivot
-@onready var body: CharacterBody
 
 @onready var camera_socket: Node3D
 
-@onready var spring_ray: RayCast3D = $NavCollider/SpringRay
-
 ## DATA
-#@export var data: CharacterData
 @export var body_data: CharacterBodyData: set = _set_character_body_data
-@export var body_stats_data: CharacterBodyStatsData
-#@export var attribute_data: CharacterAttributeData
-
 var drops_data: DropsData
 
 ## FLAGS
@@ -80,6 +76,11 @@ var current_speed: float = walk_speed
 var last_velocity: Vector3
 
 var gravity = ProjectSettings.get_setting("physics/3d/default_gravity")
+
+var attack_timer: float
+
+## STATS
+var health: float
 
 ## VEHICLE
 @export var vehicle: Node3D
@@ -139,6 +140,10 @@ func _set_character_body_data(_body_data: CharacterBodyData) -> void:
 		add_child(random_noises)
 	
 	drops_data = body_data.drops_data
+	body.animation_data = body_data.character_body_animation_data
+	
+	health = body_data.max_health
+	
 
 func get_eye_target() -> Node3D:
 	return body.get_eye_target()
@@ -154,6 +159,11 @@ func _ready() -> void:
 	#character_actions.init(body.animation_tree)
 
 func _physics_process(delta: float) -> void:
+	attack_timer = min(attack_timer + delta, body_data.attack_rate)
+	
+	if grabbed_entity:
+		if !is_instance_valid(grabbed_entity): drop_grabbed_entity()
+	
 	if !vehicle:
 		_update_movement(delta)
 	else:
@@ -182,23 +192,29 @@ func use_item() -> void:
 
 # (({[%%%(({[=======================================================================================================================]}))%%%]}))
 func grab_entity(entity: Interactable) -> void:
-	if grabbed_entity: drop_grabbed_entity()
+	if (grabbed_entity): drop_grabbed_entity()
+	if !is_instance_valid(entity): return
 	entity.set_grabbed(true)
 	grabbed_entity = entity
+	body.set_grabbing(true)
 
 func drop_grabbed_entity() -> Interactable:
 	if !is_instance_valid(grabbed_entity):
 		grabbed_entity = null
 		return null
-	var entity: Interactable = grabbed_entity
 	grabbed_entity.set_grabbed(false)
+	var entity: Interactable = grabbed_entity
 	grabbed_entity.drop(self)
 	grabbed_entity = null
+	body.set_grabbing(false)
 	return entity
 
 func _update_grabbed_entity() -> void:
 	grabbed_entity.global_position = global_position + Vector3.UP * body_data.height
 	grabbed_entity.global_rotation = body_center_pivot.global_rotation
+	if grabbed_entity is TowerBase:
+		grabbed_entity.start_position = grabbed_entity.global_position
+		grabbed_entity.current_animation_position = grabbed_entity.global_position
 
 # (({[%%%(({[=======================================================================================================================]}))%%%]}))
 func set_sprinting(active: bool) -> void: set_flag(CharacterFlag.SPRINT, active)
@@ -208,38 +224,6 @@ func toggle_sprinting() -> void:
 		set_flag_off(CharacterFlag.SPRINT)
 	else:
 		set_flag_on(CharacterFlag.SPRINT)
-
-# (({[%%%(({[=======================================================================================================================]}))%%%]}))
-func set_yaw_look_basis(_basis: Basis) -> void:
-	body.set_yaw_look_basis(_basis)
-
-func set_pitch_look_basis(_basis: Basis) -> void:
-	body.set_pitch_look_basis(_basis)
-
-func look_at_target(target: Node3D) -> void:
-	var head_ik_yaw: Node3D = body.get_head_ik_yaw()
-	if !is_instance_valid(head_ik_yaw): return
-	
-	var look_transform: Transform3D = Transform3D(Basis.IDENTITY, head_ik_yaw.global_position)
-	var _look_at: Vector3 = target.global_position
-	
-	if target is Character:
-		var target_head_ik_yaw: Node3D = target.body.get_head_ik_yaw()
-		if is_instance_valid(target_head_ik_yaw):
-			_look_at = target_head_ik_yaw.global_position
-	
-	look_transform = look_transform.looking_at(_look_at)
-	
-	set_yaw_look_basis(look_transform.basis)
-
-func look_forward() -> void:
-	var head_ik_yaw: Node3D = body.get_head_ik_yaw()
-	if !is_instance_valid(head_ik_yaw): return
-	
-	var look_transform: Transform3D = Transform3D(Basis.IDENTITY, head_ik_yaw.global_position)
-	look_transform = look_transform.looking_at(head_ik_yaw.global_position - body.global_basis.z)
-	set_yaw_look_basis(look_transform.basis)
-	set_pitch_look_basis(Basis.IDENTITY)
 
 # (({[%%%(({[=======================================================================================================================]}))%%%]}))
 func face_direction(direction: Vector3, delta: float) -> void:
@@ -260,7 +244,8 @@ func _update_movement(delta: float) -> void:
 			current_speed = jog_speed
 	
 	if is_instance_valid(grabbed_entity):
-		current_speed -= grabbed_entity.weight_slow_down
+		if grabbed_entity.interactable_data:
+			current_speed -= grabbed_entity.interactable_data.weight_slow_down
 	
 	_update_movement_grounded(delta)
 
@@ -335,7 +320,9 @@ func _update_ride_force() -> void:
 		var hit_toi: float = (hit_point - spring_ray.global_position).length()
 		var other_collider: Node3D = spring_ray.get_collider()
 		
-		set_flag(CharacterFlag.GROUNDED, hit_toi <= ride_height + ride_height * 0.1)
+		var grounded: bool = hit_toi <= ride_height + ride_height * 0.1
+		set_flag(CharacterFlag.GROUNDED, grounded)
+		body.grounded = grounded
 		if !is_flag_on(CharacterFlag.GROUNDED):
 			constant_force = Vector3.ZERO
 			return
@@ -358,26 +345,28 @@ func _update_ride_force() -> void:
 
 # (({[%%%(({[=======================================================================================================================]}))%%%]}))
 func _on_killed() -> void:
-	if drops_data:
-		for drop_data in drops_data.drops:
-			for i in drop_data.amount:
-				if drop_data.should_drop():
-					var pickup: Pickup = PICKUP.instantiate()
-					pickup.pickup_data = drop_data.pickup_data
-					pickup.position = global_position
-					Util.main.level.add_pickup(pickup)
+	if drops_data: drops_data.drop(global_position)
 	
 	if grabbed_entity: drop_grabbed_entity()
+	
+	if body_data.die_sounds:
+		var sound: SoundReferenceData = body_data.die_sounds.pool.pick_random()
+		SoundManager.play_pitched_3d_sfx(sound.id, sound.type, global_position, 0.9, 1.1, sound.volume_db, 5.0)
+	
+	body.die()
 	
 	killed.emit()
 	queue_free()
 
-var temp_hp: float = 3.0
 func _on_damageable_area_3d_damaged(damage_data: DamageData, _area_id: int, source: Node) -> void:
 	if is_flag_on(CharacterFlag.DEAD): return
 	
-	temp_hp -= damage_data.damage_strength
-	if temp_hp < 0.0:
+	if body_data.hit_sounds:
+		var sound: SoundReferenceData = body_data.hit_sounds.pool.pick_random()
+		SoundManager.play_pitched_3d_sfx(sound.id, sound.type, global_position, 0.9, 1.1, sound.volume_db, 5.0)
+	
+	health -= damage_data.damage_strength
+	if health < 0.0:
 		set_flag_on(CharacterFlag.DEAD)
 		if is_instance_valid(source) && source.has_method("add_experience"):
 			source.add_experience(body_data.get_experience_value())
@@ -402,6 +391,7 @@ func _update_eating(delta: float) -> void:
 	
 	eating_timer += delta
 	if eating_timer >= body_data.time_to_eat:
+		eating_timer -= body_data.time_to_eat
 		Util.player.game_resources.bread -= 1
 		grabbed_entity.queue_free()
 		body.set_eating(null)
@@ -411,3 +401,14 @@ func _update_eating(delta: float) -> void:
 # (({[%%%(({[=======================================================================================================================]}))%%%]}))
 func get_velocity() -> Vector3:
 	return linear_velocity
+
+# (({[%%%(({[=======================================================================================================================]}))%%%]}))
+func try_attack() -> bool:
+	if attack_timer == body_data.attack_rate:
+		attack_timer = 0.0
+		body.attack()
+		if body_data.attack_sounds:
+			var sound: SoundReferenceData = body_data.attack_sounds.pool.pick_random()
+			SoundManager.play_pitched_3d_sfx(sound.id, sound.type, global_position, 0.9, 1.1, sound.volume_db, 5.0)
+		return true
+	return false

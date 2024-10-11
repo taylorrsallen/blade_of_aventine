@@ -3,7 +3,7 @@ class_name BlockPile extends Interactable
 # (({[%%%(({[=======================================================================================================================]}))%%%]}))
 const BLOCK_PILE: PackedScene = preload("res://systems/level/entities/interactable/block_pile/block_pile.scn")
 var BLOCK_RECIPE_DATABASE: BlockPileRecipeDatabase = load("res://resources/block_recipes/block_recipe_database.res")
-
+#const BLOCK_RECIPE_DATABASE = preload("res://resources/block_recipes/block_recipe_database.res")
 # (({[%%%(({[=======================================================================================================================]}))%%%]}))
 @onready var block_models: Node3D = $BlockModels
 @export var blocks: Array[BlockData] = []
@@ -13,14 +13,14 @@ var valid_recipe: BlockPileRecipeData
 
 var damage_to_block_destruction: float = 2.0
 var damage_taken: float
-var destroyed: bool
 
 # (({[%%%(({[=======================================================================================================================]}))%%%]}))
 func _ready() -> void:
-	$StaticBody3D/CollisionShape3D.shape = $StaticBody3D/CollisionShape3D.shape.duplicate()
+	$InteractableCollider/CollisionShape3D.shape = $InteractableCollider/CollisionShape3D.shape.duplicate()
 	_refresh()
 
 func _physics_process(delta: float) -> void:
+	_update_thrown_state(delta)
 	damage_taken = max(damage_taken - delta, 0.0)
 
 # (({[%%%(({[=======================================================================================================================]}))%%%]}))
@@ -37,7 +37,7 @@ func take_block() -> BlockPile:
 	if blocks.size() > 1:
 		var new_block_pile: BlockPile = BLOCK_PILE.instantiate()
 		new_block_pile.add_block(blocks.pop_back())
-		Util.main.level.add_child(new_block_pile)
+		Util.main.level.add_tile_entity(new_block_pile)
 		_refresh()
 		return new_block_pile
 	else:
@@ -52,8 +52,8 @@ func _refresh() -> void:
 		block_model.rotate_y(randf_range(0.0, 3.14))
 		pile_height += block_data.height
 		$BlockModels.add_child(block_model)
-	$StaticBody3D/CollisionShape3D.shape.size.y = pile_height
-	$StaticBody3D.position.y = pile_height * 0.5
+	$InteractableCollider/CollisionShape3D.shape.size.y = pile_height
+	$InteractableCollider.position.y = pile_height * 0.5
 
 	var found_recipe: BlockPileRecipeData = null
 	for existing_recipe in BLOCK_RECIPE_DATABASE.database:
@@ -74,21 +74,29 @@ func _refresh() -> void:
 
 func try_craft() -> void:
 	if !valid_recipe: return
-	var result = valid_recipe.result.instantiate()
-	result.recipe = valid_recipe
+	var result: Interactable = valid_recipe.instantiate(global_position)
 	result.faction_id = faction_id
-	result.position = global_position - Vector3.UP * 5.0
-	Util.main.level.add_tile_entity(result)
 	queue_free()
 
 # (({[%%%(({[=======================================================================================================================]}))%%%]}))
 func damage(damage_data: DamageData, _source: Node) -> void:
 	if destroyed: return
 	
+	_deal_scepter_damage()
+	
 	damage_taken += damage_data.damage_strength
 	if damage_taken >= damage_to_block_destruction:
 		damage_taken -= damage_to_block_destruction
 		var taken_block_pile: BlockPile = take_block()
 		if taken_block_pile == self:
-			destroyed = true
-			queue_free()
+			_destroy()
+
+# (({[%%%(({[=======================================================================================================================]}))%%%]}))
+func _special_tumbling_interactable_collision(interactable: Interactable) -> bool:
+	if interactable is BlockPile && !blocks.is_empty():
+		for i in blocks.size():
+			interactable.add_block(blocks[i])
+		queue_free()
+		return true
+	else:
+		return false

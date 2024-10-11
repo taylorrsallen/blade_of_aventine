@@ -22,3 +22,10 @@ func clear() -> void:
 
 func set_icon_texture(icon_id: int, _texture: Texture2D) -> void:
 	icons[icon_id].texture = _texture
+	_on_resized()
+
+# (({[%%%(({[=======================================================================================================================]}))%%%]}))
+func _on_resized() -> void:
+	for icon in icons:
+		icon.size = size
+		icon.position.y = -(icon.size.y * 0.5)

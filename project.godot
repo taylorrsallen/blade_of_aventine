@@ -14,6 +14,7 @@ config/name="Blade of Aventine"
 run/main_scene="res://systems/managers/main.scn"
 config/features=PackedStringArray("4.3", "GL Compatibility")
 boot_splash/image="res://level_path_cost.png"
+config/icon="res://assets/sprites/icons/peasant_icon.png"
 
 [autoload]
 

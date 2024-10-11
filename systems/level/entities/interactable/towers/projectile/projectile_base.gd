@@ -17,6 +17,8 @@ var data: ProjectileData: set = _set_data
 
 var source: Node: set = _set_source
 
+var model: Node3D
+
 # (({[%%%(({[=======================================================================================================================]}))%%%]}))
 func _set_source(_source: Node) -> void:
 	$DamagingArea3D.source = _source
@@ -25,6 +27,7 @@ func _set_data(_data: ProjectileData) -> void:
 	data = _data
 	$DamagingArea3D.damage_data = data.damage_data
 	$DamagingArea3D.damage_on_impact = data.damage_on_impact
+	add_child(data.model_scene.instantiate())
 
 # (({[%%%(({[=======================================================================================================================]}))%%%]}))
 func _destroy() -> void:

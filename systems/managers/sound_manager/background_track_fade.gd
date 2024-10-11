@@ -16,9 +16,9 @@ func try_finish(delta: float) -> bool:
 	lifetime += delta
 	if lifetime < fade_time:
 		var fade_percent: float = lifetime / fade_time
-		SoundManager.background_tracks[bgt_layer].volume_db = lerpf(start_db, target_db, fade_percent)
+		SoundManager.background_tracks[bgt_layer].base_volume_db = lerpf(start_db, target_db, fade_percent)
 	else:
-		SoundManager.background_tracks[bgt_layer].volume_db = target_db
+		SoundManager.background_tracks[bgt_layer].base_volume_db = target_db
 		if erase_when_complete: SoundManager.erase_background_track(bgt_layer)
 		return true
 	return false

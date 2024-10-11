@@ -59,6 +59,11 @@ func clear() -> void:
 	active_line = null
 	lines_to_read.clear()
 
+func is_reading() -> bool:
+	if !active_line: return false
+	if active_char < active_line.line.length(): return true
+	return false
+
 # (({[%%%(({[=======================================================================================================================]}))%%%]}))
 func _try_read_lines(delta: float) -> bool:
 	if !active_line: active_line = lines_to_read.pop_front()

@@ -2,20 +2,36 @@ class_name TowerBase extends Interactable
 
 # (({[%%%(({[=======================================================================================================================]}))%%%]}))
 const BLOCK_PILE: PackedScene = preload("res://systems/level/entities/interactable/block_pile/block_pile.scn")
+const FACE_TARGET: PackedScene = preload("res://systems/common/face_target/face_target.scn")
+
+const LEVEL_COLORS: Array[Color] = [
+	Color8(157, 157, 157),
+	Color8(255, 255, 255),
+	Color8(30, 255, 0),
+	Color8(0, 112, 221),
+	Color8(163, 53, 238),
+	Color8(255, 128, 0),
+]
 
 # (({[%%%(({[=======================================================================================================================]}))%%%]}))
-@export var projectile_emitter: Node3D
+@onready var range_indicator: MeshInstance3D = $RangeIndicator
 
-@export var type_data: TowerTypeData
+var type_data: TowerTypeData: set = _set_type_data
 
-@export var level: int
-@export var experience: float
+var foundation: ModelWithHeight
+var pitch_pivot: FaceTarget
+var pitch_pivot_model: TowerPitchPivotModel
+var yaw_pivot: FaceTarget
+var yaw_pivot_model: TowerYawPivotModel
+
+var level: int
+var experience: float
 
 var enemies: Array[Character] = []
 var protect_position: bool
-@export var position_to_protect: Vector3
+var position_to_protect: Vector3
 
-@export var target: Node3D
+var target: Node3D
 var target_aim_point: Vector3
 
 var firing_cd: float = 1.0
@@ -27,38 +43,120 @@ var build_timer: float
 var started_building: bool
 
 var start_position: Vector3
+var current_animation_position: Vector3
 
-@export var health: float
-var destroyed: bool
+var health: float
 
 var waiting_on_area_query: bool
 var area_query_cd: float = 0.2
 var area_query_timer: float
-
-@export var seek_targets: bool = true
-@export var shoot_while_held: bool
 
 var scepter_damage_reset_cd: float = 3.0
 var scepter_damage_reset_timer: float
 var scepter_damage_to_destruction: float = 3.0
 var scepter_damage: float
 
+var readied: bool
+
+func _set_type_data(_type_data: TowerTypeData) -> void:
+	type_data = _type_data
+	
+	if !readied: return
+	
+	if type_data.foundation_scene:
+		if is_instance_valid(foundation): foundation.queue_free()
+		foundation = type_data.foundation_scene.instantiate()
+		add_child(foundation)
+	
+	if type_data.yaw_pivot_scene:
+		if is_instance_valid(yaw_pivot): yaw_pivot.queue_free()
+		yaw_pivot = FACE_TARGET.instantiate()
+		yaw_pivot.position.y = foundation.height
+		foundation.add_child(yaw_pivot)
+		if is_instance_valid(yaw_pivot_model): yaw_pivot_model.queue_free()
+		yaw_pivot_model = type_data.yaw_pivot_scene.instantiate()
+		yaw_pivot.add_child(yaw_pivot_model)
+	
+	if type_data.pitch_pivot_scene:
+		if is_instance_valid(pitch_pivot): pitch_pivot.queue_free()
+		pitch_pivot = FACE_TARGET.instantiate()
+		pitch_pivot.position = yaw_pivot_model.pitch_pivot_rotor.position
+		pitch_pivot.rotation_degrees.z = 90.0
+		yaw_pivot.add_child(pitch_pivot)
+		if is_instance_valid(pitch_pivot_model): pitch_pivot_model.queue_free()
+		pitch_pivot_model = type_data.pitch_pivot_scene.instantiate()
+		pitch_pivot_model.rotation_degrees.z = -90.0
+		pitch_pivot.add_child(pitch_pivot_model)
+	
+	var tower_height: float = foundation.height + yaw_pivot_model.height
+	$InteractableCollider/CollisionShape3D.shape.size.y = tower_height
+	$InteractableCollider/CollisionShape3D.position.y = tower_height * 0.5
+	
+	var effective_range: float = type_data.level_blueprints[level].attack_range + Util.main.level.get_placement_height_at_global_coord(global_position)
+	$RangeIndicator.mesh.top_radius = effective_range
+	$RangeIndicator.mesh.bottom_radius = effective_range
+	
+	if type_data.interactable_data: interactable_data = type_data.interactable_data
+
 # (({[%%%(({[=======================================================================================================================]}))%%%]}))
 func _ready() -> void:
-	init()
+	$InteractableCollider/CollisionShape3D.shape = $InteractableCollider/CollisionShape3D.shape.duplicate()
+	$RangeIndicator.mesh = $RangeIndicator.mesh.duplicate()
+	
+	just_highlighted.connect(_on_just_highlighted)
+	just_unhighlighted.connect(_on_just_unhighlighted)
+	
+	readied = true
+	type_data = type_data
+	
+	start_position = global_position
+	
+	global_position.y = -(foundation.height + yaw_pivot_model.height)
+	
+	position_to_protect = Util.main.level.centered_global_coord_from_local_coord(Util.main.level.faction_base_local_coords[faction_id])
+	protect_position = true
 
 func _physics_process(delta: float) -> void:
 	if !try_build_tower(delta): return
 	_update(delta)
+	
+	if !is_instance_valid(target): return
+	
+	if _try_fire():
+		target_aim_point = _get_aim_point()
+		yaw_pivot.face_point(target_aim_point, delta * type_data.level_blueprints[level].move_speed_multiplier)
+		
+		if is_instance_valid(pitch_pivot):
+			pitch_pivot.face_point(target_aim_point, delta * type_data.level_blueprints[level].move_speed_multiplier)
+			if yaw_pivot.is_facing_point(target_aim_point) && pitch_pivot.is_facing_point(target_aim_point):
+				_fire_projectile()
+		else:
+			if yaw_pivot.is_facing_point(target_aim_point):
+				_fire_projectile()
 
 # (({[%%%(({[=======================================================================================================================]}))%%%]}))
-func init() -> void:
-	start_position = position
-	start_position.y = 0.0
-	position_to_protect = Util.main.level.centered_global_coord_from_local_coord(Util.main.level.faction_base_local_coords[faction_id])
-	protect_position = true
-	weight_slow_down = 2.0
+func _fire_projectile() -> void:
+	firing = false
+	if type_data.projectile_sound: SoundManager.play_pitched_3d_sfx(type_data.projectile_sound.id, type_data.projectile_sound.type, global_position, 0.9, 1.1, 0.0, 5.0)
+	pitch_pivot_model.projectile_emitter.hide()
+	
+	var arrow: ProjectileBase = type_data.projectile.instantiate()
+	
+	arrow.data = type_data.projectile_data
+	arrow.data.damage_data.damage_strength *= type_data.level_blueprints[level].damage_multiplier
+	arrow.data.speed = type_data.level_blueprints[level].projectile_speed
+	
+	arrow.position = pitch_pivot_model.projectile_emitter.global_position
+	arrow.basis = pitch_pivot_model.projectile_emitter.global_basis
+	arrow.direction = -pitch_pivot_model.projectile_emitter.global_basis.z
+	arrow.flat_direction = target_aim_point - global_position
+	arrow.flat_direction.y = 0.0
+	arrow.flat_direction = arrow.flat_direction.normalized()
+	arrow.start_distance = Vector3(global_position.x, 0.0, global_position.z).distance_to(Vector3(target_aim_point.x, 0.0, target_aim_point.z))
+	arrow.source = self
+	Util.main.level.add_child(arrow)
 
+# (({[%%%(({[=======================================================================================================================]}))%%%]}))
 func _update(delta: float) -> void:
 	if health < type_data.level_blueprints[level].max_health:
 		health = min(health + delta, type_data.level_blueprints[level].max_health)
@@ -72,44 +170,49 @@ func _update(delta: float) -> void:
 			scepter_damage = 0.0
 
 func _update_target_seeking(delta: float) -> void:
-	if !seek_targets: return
+	if !type_data.seek_targets: return
 	firing_timer = min(firing_cd, firing_timer + delta * type_data.level_blueprints[level].attack_speed_multiplier)
-	if !shoot_while_held && grabbed: return
+	if !type_data.shoot_while_held && grabbed: return
 	_update_enemy_area_query(delta)
 
-func _try_fire(delta: float) -> bool:
-	if !shoot_while_held && grabbed: return false
+func _try_fire() -> bool:
+	if !type_data.shoot_while_held && grabbed: return false
 	if firing: return true
 	if firing_timer >= firing_cd:
 		firing_timer = 0.0
 		firing = true
+		_reload()
 		return true
 	else:
 		return false
 
-func _fire_projectile() -> void:
-	firing = false
-	if type_data.projectile_sound: SoundManager.play_pitched_3d_sfx(type_data.projectile_sound.id, type_data.projectile_sound.type, global_position, 0.9, 1.1, 0.0, 5.0)
+func _reload() -> void:
+	if type_data.reload_sound:
+		SoundManager.play_pitched_3d_sfx(type_data.reload_sound.id, type_data.reload_sound.type, global_position)
+	pitch_pivot_model.projectile_emitter.show()
 
 # (({[%%%(({[=======================================================================================================================]}))%%%]}))
 func try_build_tower(delta: float) -> bool:
 	if !started_building:
 		started_building = true
-		SoundManager.play_pitched_3d_sfx(2, SoundDatabase.SoundType.SFX_FOLEY, global_position  )
+		SoundManager.play_pitched_3d_sfx(2, SoundDatabase.SoundType.SFX_FOLEY, global_position)
 	
 	if !built:
 		build_timer += delta
 		if build_timer >= type_data.build_time:
 			position = start_position
-			if seek_targets: firing_timer = firing_cd
+			current_animation_position = start_position
+			if type_data.seek_targets: firing_timer = firing_cd
 			built = true
 			return true
 		else:
+			var tower_height: float = foundation.height + yaw_pivot_model.height
 			var build_percent: float = build_timer / type_data.build_time
 			health = type_data.level_blueprints[0].max_health * build_percent
-			position.y = -2.0 + 2.0 * build_percent
+			position.y = -tower_height + tower_height * build_percent + start_position.y
 			position.x = start_position.x + randf_range(-0.05, 0.05)
 			position.z = start_position.z + randf_range(-0.05, 0.05)
+			current_animation_position = position
 		
 		return false
 	return true
@@ -118,12 +221,18 @@ func try_build_tower(delta: float) -> bool:
 func deal_scepter_damage() -> void:
 	if destroyed: return
 	
+	_play_generic_damage_animation()
+	_deal_scepter_damage()
+	
 	scepter_damage += 1.0
 	scepter_damage_reset_timer = 0.0
 	if scepter_damage >= scepter_damage_to_destruction: destroy()
 
 func damage(damage_data: DamageData, _source: Node) -> void:
 	if destroyed: return
+	
+	_play_generic_damage_animation()
+	_deal_scepter_damage()
 	
 	if type_data.level_blueprints[level].max_health < 0.0: return
 	health -= damage_data.damage_strength
@@ -133,23 +242,24 @@ func damage_sourceless(damage_data: DamageData) -> void:
 	damage(damage_data, null)
 
 func destroy() -> void:
-	destroyed = true
+	_destroy()
 	
 	if recipe:
 		var block_pile: BlockPile = BLOCK_PILE.instantiate()
 		block_pile.position = position
-		block_pile.position.y = 0.0
+		block_pile.position.y = Util.main.level.get_placement_height_at_global_coord(block_pile.position)
 		Util.main.level.add_tile_entity(block_pile)
 		for ingredient in recipe.ingredients:
 			block_pile.add_block(ingredient)
-	
-	queue_free()
 
 # (({[%%%(({[=======================================================================================================================]}))%%%]}))
 func add_experience(_experience: float) -> void:
 	experience += _experience
 	if experience >= type_data.exp_needed_for_first_level + type_data.extra_exp_requirement_per_level * level:
 		level = min(type_data.level_blueprints.size() - 1, level + 1)
+		var effective_range: float = type_data.level_blueprints[level].attack_range + Util.main.level.get_placement_height_at_global_coord(global_position)
+		$RangeIndicator.mesh.bottom_radius = effective_range
+		$RangeIndicator.mesh.top_radius = effective_range
 		experience = 0.0
 	
 	print("Experience: %s | Level: %s" % [experience, level])
@@ -159,7 +269,8 @@ func _update_enemy_area_query(delta: float) -> void:
 	area_query_timer += delta
 	if !waiting_on_area_query && area_query_timer >= area_query_cd:
 		area_query_timer -= area_query_cd
-		AreaQueryManager.request_area_query(self, global_position, type_data.level_blueprints[level].attack_range, 18)
+		var effective_range: float = type_data.level_blueprints[level].attack_range + Util.main.level.get_placement_height_at_global_coord(global_position)
+		AreaQueryManager.request_area_query(self, global_position, effective_range, 18)
 		#DebugDraw3D.draw_sphere(global_position, type_data.level_blueprints[level].attack_range, Color.RED, delta)
 
 func update_area_query(results: Array[PhysicsBody3D]) -> void:
@@ -219,7 +330,7 @@ func _get_aim_point() -> Vector3:
 	if !target.has_method("get_velocity"): return target.global_position + Vector3.UP * 0.5
 	
 	var pti: Vector3 = target.global_position + Vector3.UP * 0.5
-	var pbi: Vector3 = projectile_emitter.global_position
+	var pbi: Vector3 = pitch_pivot_model.projectile_emitter.global_position
 	var d: float = pti.distance_to(pbi)
 	var vt: Vector3 = target.get_velocity()
 	var st: float = vt.length()
@@ -236,3 +347,21 @@ func _get_aim_point() -> Vector3:
 	if t < 0.0: t = max(t1, t2)
 	if t < 0.0: return Vector3.INF
 	return vt * t + pti
+
+# (({[%%%(({[=======================================================================================================================]}))%%%]}))
+func _play_generic_damage_animation() -> void:
+	for i in 5:
+		position = current_animation_position + (Vector3(randf(), randf(), randf()) - Vector3.ONE * 0.5) * 0.3
+		await get_tree().create_timer(0.01).timeout
+		position = current_animation_position
+		await get_tree().create_timer(0.01).timeout
+
+# (({[%%%(({[=======================================================================================================================]}))%%%]}))
+func _on_just_highlighted(_interactable: Interactable, _source: Character, _controller: PlayerController) -> void:
+	range_indicator.show()
+	var effective_range: float = type_data.level_blueprints[level].attack_range + Util.main.level.get_placement_height_at_global_coord(global_position)
+	$RangeIndicator.mesh.bottom_radius = effective_range
+	$RangeIndicator.mesh.top_radius = effective_range
+
+func _on_just_unhighlighted(_interactable: Interactable, _source: Character, _controller: PlayerController) -> void:
+	range_indicator.hide()

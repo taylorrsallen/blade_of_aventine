@@ -16,7 +16,6 @@ class_name AIController
 var direction_drift: Vector2
 
 var attack_targets: Array[Interactable]
-var attack_timer: float
 
 var area_query_cd: float = 3.0
 var area_query_timer: float
@@ -56,7 +55,7 @@ func _physics_process(delta: float) -> void:
 	
 	_update_movement(delta)
 	_update_attack_targets_area_query(delta)
-	_try_attack(delta)
+	_try_attack()
 
 # (({[%%%(({[=======================================================================================================================]}))%%%]}))
 func _update_movement(delta: float) -> void:
@@ -106,21 +105,14 @@ func _update_attack_targets_area_query(delta: float) -> void:
 		AreaQueryManager.request_area_query(self, character.global_position, character.body_data.attack_range * 3.0, 512)
 
 ## Character must be valid or this will crash
-func _try_attack(delta: float) -> void:
-	attack_timer = min(attack_timer + delta, character.body_data.attack_rate)
-	
+func _try_attack() -> void:
 	var closest_target: Interactable = get_closest_target()
 	if !is_instance_valid(closest_target): return
-	
-	DebugDraw3D.draw_line(closest_target.global_position, closest_target.global_position + Vector3.UP * 5.0, Color.RED, delta)
 	
 	var attack_target_position: Vector3 = Vector3(closest_target.global_position.x, 0.0, closest_target.global_position.z)
 	if attack_target_position.distance_to(character.global_position) > character.body_data.attack_range: return
 	
-	if attack_timer == character.body_data.attack_rate:
-		attack_timer = 0.0
-		character.body.attack()
-		print("attack!")
+	if character.try_attack():
 		if closest_target.has_method("damage"):
 			var damage_data: DamageData = DamageData.new()
 			damage_data.damage_strength = character.body_data.attack_damage
@@ -149,7 +141,7 @@ func get_closest_target() -> Interactable:
 # (({[%%%(({[=======================================================================================================================]}))%%%]}))
 func _on_character_finished_eating() -> void:
 	bread_eaten += 1
-	if bread_eaten == character.body_data.bread_to_eat:
+	if bread_eaten >= character.body_data.bread_to_eat:
 		queue_free()
 		#finished_eating = true
 	else:
