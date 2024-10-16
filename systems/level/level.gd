@@ -615,6 +615,7 @@ func get_terrain_id_at_global_coord(global_coord: Vector3) -> int:
 	return get_terrain_id_at_local_coord(local_coord_from_global_coord(global_coord))
 
 func get_terrain_id_at_local_coord(local_coord: Vector2i) -> int:
+	if !is_global_coord_in_bounds(global_coord_from_local_coord(local_coord)): return 0
 	var i: int = local_coord.y * level_dim + local_coord.x
 	return terrain_tiles[i]
 
