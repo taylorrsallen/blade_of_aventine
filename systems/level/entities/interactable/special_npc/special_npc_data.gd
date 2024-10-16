@@ -17,6 +17,8 @@ enum DialogueFinishedAction {
 @export var scene: PackedScene
 @export var speaker_data: DialogueSpeakerData
 @export var height: float = 1.0
+@export var collision: bool = true
+@export var hit_reaction: DialogueFinishedAction
 
 @export_category("Spawn")
 @export var spawn_animation: SpawnAnimation
@@ -25,5 +27,8 @@ enum DialogueFinishedAction {
 
 @export_category("Dialogue")
 @export var dialogue_spawn_delay: float
+@export var dialogue_interact_sound: SoundPoolData
 @export var dialogue_finished_action: DialogueFinishedAction
+@export var dialogue_finished_sound: SoundPoolData
 @export var level_id_to_send_player_to: int = -10
+@export var dialogue_data_override: DialogueData

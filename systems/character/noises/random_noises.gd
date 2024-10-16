@@ -3,7 +3,7 @@ class_name RandomNoises extends Node3D
 # (({[%%%(({[=======================================================================================================================]}))%%%]}))
 @export var random_sound_pool: SoundPoolData
 @export var random_sound_cd: float = 10.0
-var random_sound_timer: float = 0.0
+var random_sound_timer: float = randf_range(0.0, random_sound_cd)
 
 # (({[%%%(({[=======================================================================================================================]}))%%%]}))
 func _physics_process(delta: float) -> void:

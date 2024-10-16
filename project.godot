@@ -20,9 +20,11 @@ config/icon="res://assets/sprites/icons/peasant_icon.png"
 
 SoundManager="*res://systems/managers/sound_manager/sound_manager.gd"
 AreaQueryManager="*res://systems/managers/area_query_manager.gd"
+EventBus="*res://systems/managers/event_bus.gd"
 
 [debug]
 
+gdscript/warnings/unused_signal=0
 gdscript/warnings/integer_division=0
 gdscript/warnings/narrowing_conversion=0
 
@@ -53,7 +55,31 @@ move_left_0={
 "deadzone": 0.5,
 "events": []
 }
+move_left_1={
+"deadzone": 0.5,
+"events": []
+}
+move_left_2={
+"deadzone": 0.5,
+"events": []
+}
+move_left_3={
+"deadzone": 0.5,
+"events": []
+}
 move_right_0={
+"deadzone": 0.5,
+"events": []
+}
+move_right_1={
+"deadzone": 0.5,
+"events": []
+}
+move_right_2={
+"deadzone": 0.5,
+"events": []
+}
+move_right_3={
 "deadzone": 0.5,
 "events": []
 }
@@ -61,7 +87,31 @@ move_forward_0={
 "deadzone": 0.5,
 "events": []
 }
+move_forward_1={
+"deadzone": 0.5,
+"events": []
+}
+move_forward_2={
+"deadzone": 0.5,
+"events": []
+}
+move_forward_3={
+"deadzone": 0.5,
+"events": []
+}
 move_back_0={
+"deadzone": 0.5,
+"events": []
+}
+move_back_1={
+"deadzone": 0.5,
+"events": []
+}
+move_back_2={
+"deadzone": 0.5,
+"events": []
+}
+move_back_3={
 "deadzone": 0.5,
 "events": []
 }
@@ -69,7 +119,15 @@ interact_0={
 "deadzone": 0.5,
 "events": []
 }
-item_0={
+interact_1={
+"deadzone": 0.5,
+"events": []
+}
+interact_2={
+"deadzone": 0.5,
+"events": []
+}
+interact_3={
 "deadzone": 0.5,
 "events": []
 }
@@ -77,35 +135,31 @@ primary_0={
 "deadzone": 0.5,
 "events": []
 }
+primary_1={
+"deadzone": 0.5,
+"events": []
+}
+primary_2={
+"deadzone": 0.5,
+"events": []
+}
+primary_3={
+"deadzone": 0.5,
+"events": []
+}
 secondary_0={
 "deadzone": 0.5,
 "events": []
 }
-ability_0_0={
+secondary_1={
 "deadzone": 0.5,
 "events": []
 }
-ability_1_0={
+secondary_2={
 "deadzone": 0.5,
 "events": []
 }
-ability_2_0={
-"deadzone": 0.5,
-"events": []
-}
-ability_3_0={
-"deadzone": 0.5,
-"events": []
-}
-ability_4_0={
-"deadzone": 0.5,
-"events": []
-}
-ability_5_0={
-"deadzone": 0.5,
-"events": []
-}
-ability_6_0={
+secondary_3={
 "deadzone": 0.5,
 "events": []
 }
@@ -117,15 +171,131 @@ sprint_0={
 "deadzone": 0.5,
 "events": []
 }
+sprint_1={
+"deadzone": 0.5,
+"events": []
+}
+sprint_2={
+"deadzone": 0.5,
+"events": []
+}
+sprint_3={
+"deadzone": 0.5,
+"events": []
+}
 zoom_in_0={
 "deadzone": 0.5,
 "events": [Object(InputEventMouseButton,"resource_local_to_scene":false,"resource_name":"","device":-1,"window_id":0,"alt_pressed":false,"shift_pressed":false,"ctrl_pressed":false,"meta_pressed":false,"button_mask":8,"position":Vector2(181, 12),"global_position":Vector2(190, 58),"factor":1.0,"button_index":4,"canceled":false,"pressed":true,"double_click":false,"script":null)
 ]
 }
+zoom_in_1={
+"deadzone": 0.5,
+"events": []
+}
+zoom_in_2={
+"deadzone": 0.5,
+"events": []
+}
+zoom_in_3={
+"deadzone": 0.5,
+"events": []
+}
 zoom_out_0={
 "deadzone": 0.5,
 "events": [Object(InputEventMouseButton,"resource_local_to_scene":false,"resource_name":"","device":-1,"window_id":0,"alt_pressed":false,"shift_pressed":false,"ctrl_pressed":false,"meta_pressed":false,"button_mask":16,"position":Vector2(144, 28),"global_position":Vector2(153, 74),"factor":1.0,"button_index":5,"canceled":false,"pressed":true,"double_click":false,"script":null)
 ]
+}
+zoom_out_1={
+"deadzone": 0.5,
+"events": []
+}
+zoom_out_2={
+"deadzone": 0.5,
+"events": []
+}
+zoom_out_3={
+"deadzone": 0.5,
+"events": []
+}
+look_left_0={
+"deadzone": 0.5,
+"events": []
+}
+look_left_1={
+"deadzone": 0.5,
+"events": []
+}
+look_left_2={
+"deadzone": 0.5,
+"events": []
+}
+look_left_3={
+"deadzone": 0.5,
+"events": []
+}
+look_right_0={
+"deadzone": 0.5,
+"events": []
+}
+look_right_1={
+"deadzone": 0.5,
+"events": []
+}
+look_right_2={
+"deadzone": 0.5,
+"events": []
+}
+look_right_3={
+"deadzone": 0.5,
+"events": []
+}
+look_down_0={
+"deadzone": 0.5,
+"events": []
+}
+look_down_1={
+"deadzone": 0.5,
+"events": []
+}
+look_down_2={
+"deadzone": 0.5,
+"events": []
+}
+look_down_3={
+"deadzone": 0.5,
+"events": []
+}
+look_up_0={
+"deadzone": 0.5,
+"events": []
+}
+look_up_1={
+"deadzone": 0.5,
+"events": []
+}
+look_up_2={
+"deadzone": 0.5,
+"events": []
+}
+look_up_3={
+"deadzone": 0.5,
+"events": []
+}
+recipes_0={
+"deadzone": 0.5,
+"events": []
+}
+recipes_1={
+"deadzone": 0.5,
+"events": []
+}
+recipes_2={
+"deadzone": 0.5,
+"events": []
+}
+recipes_3={
+"deadzone": 0.5,
+"events": []
 }
 
 [layer_names]
@@ -135,6 +305,7 @@ zoom_out_0={
 3d_physics/layer_3="CHARACTER_DAMAGE"
 3d_physics/layer_4="PICKUPS"
 3d_physics/layer_5="CHARACTERS_WITH_BREAD"
+3d_physics/layer_6="FLYING_CHARACTERS"
 3d_physics/layer_10="INTERACTABLES"
 
 [rendering]

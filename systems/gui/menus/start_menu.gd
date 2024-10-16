@@ -4,6 +4,7 @@ class_name StartMenu extends MenuBase
 const MAIN_MENU: PackedScene = preload("res://systems/gui/menus/main_menu.scn")
 const LEVEL_SELECT: PackedScene = preload("res://systems/gui/menus/level_select/level_select_menu.scn")
 const START_MENU: PackedScene = preload("res://systems/gui/menus/start_menu.scn")
+var PLAYERS_MENU: PackedScene = load("res://systems/gui/menus/players/players_menu.scn")
 
 # (({[%%%(({[=======================================================================================================================]}))%%%]}))
 @onready var start_panel_container: PanelContainer = $StartPanelContainer
@@ -31,6 +32,11 @@ func _on_level_select_pressed() -> void:
 	var level_select: LevelSelectMenu = LEVEL_SELECT.instantiate()
 	level_select.back_menu = START_MENU
 	Util.player.menu_view.add_child(level_select)
+	queue_free()
+
+func _on_players_pressed() -> void:
+	var players: PlayersMenu = PLAYERS_MENU.instantiate()
+	Util.player.menu_view.add_child(players)
 	queue_free()
 
 func _on_settings_pressed() -> void:

@@ -2,6 +2,7 @@ class_name DialogueReader extends Node
 
 # (({[%%%(({[=======================================================================================================================]}))%%%]}))
 signal finished_reading()
+signal line_changed()
 signal sound_queue(sound_id: int, sound_type: int, volume_db: float, pitch: float)
 
 # (({[%%%(({[=======================================================================================================================]}))%%%]}))
@@ -66,7 +67,9 @@ func is_reading() -> bool:
 
 # (({[%%%(({[=======================================================================================================================]}))%%%]}))
 func _try_read_lines(delta: float) -> bool:
-	if !active_line: active_line = lines_to_read.pop_front()
+	if !active_line:
+		active_line = lines_to_read.pop_front()
+		line_changed.emit()
 	
 	if !active_line:
 		finished_reading.emit()
@@ -94,6 +97,8 @@ func _add_char_to_line() -> void:
 	var sound_type: int = data.speaker.beep.type
 	var pitch: float = active_line.pitch * data.speaker.pitch
 	active_text += char_to_add
+	
+	if !data.speaker: return
 	
 	if char_to_add == ",":
 		char_read_cd_mod = 0.1 * active_line.speed * data.speaker.speed

@@ -3,9 +3,8 @@ class_name LevelWaveBatchSpawner
 # (({[%%%(({[=======================================================================================================================]}))%%%]}))
 const CHARACTER: PackedScene = preload("res://systems/character/character.scn")
 const AI_CONTROLLER: PackedScene = preload("res://systems/controller/ai/ai_controller.scn")
-const COIN: PickupData = preload("res://resources/pickups/coin.res")
 
-const FACTION_DATABASE: FactionDatabase = preload("res://resources/factions/faction_database.res")
+var FACTION_DATABASE: FactionDatabase = load("res://resources/factions/faction_database.res")
 
 # (({[%%%(({[=======================================================================================================================]}))%%%]}))
 var data: LevelWaveBatchData: set = _set_data
@@ -63,8 +62,11 @@ func spawn_enemy(spawner: UnitSpawner) -> void:
 	ai_controller.add_child(ai_controller.character)
 	
 	var drops: DropsData = DropsData.new()
-	var drop_data: DropData = DropData.new()
-	drop_data.pickup_data = COIN
-	drop_data.amount = coins_per_spawn.pop_back() / 10
-	drops.drops.append(drop_data)
+	var coins: Array[PickupData] = CoinSpawner.get_coins_for_amount(coins_per_spawn.pop_back())
+	for coin in coins:
+		var drop_data: DropData = DropData.new()
+		drop_data.pickup_data = coin
+		drop_data.amount = 1
+		drops.drops.append(drop_data)
+	
 	ai_controller.character.drops_data = drops

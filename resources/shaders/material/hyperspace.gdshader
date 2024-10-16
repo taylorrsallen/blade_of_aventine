@@ -16,7 +16,7 @@ void fragment() {
     float itime = (TIME-2.0)*58.0;
 	vec3 col = vec3(0);
     vec3 init = vec3(sin(itime * .0032)*.3, .35 - cos(itime * .005)*.3, itime * 0.002);
-	for (int r = 0; r < 100; r++) 
+	for (int r = 0; r < 100; r++)
 	{
 		vec3 p = init + s * vec3(uv, 0.05);
 		p.z = fract(p.z);
@@ -27,5 +27,5 @@ void fragment() {
 		s += .025;
 	}
 	ALBEDO = clamp(col, 0.0, 1.0);
-	}	
+	}
 }

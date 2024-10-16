@@ -1,8 +1,16 @@
 class_name CharacterBodyData extends Resource
 
+enum BodyType {
+	GROUND,
+	FLYING,
+}
+
 @export_category("Base")
 @export var body_scene: PackedScene
 @export var height: float
+@export var radius: float = 0.3
+@export var mass: float = 1.0
+@export var body_type: BodyType
 
 @export_category("Movement")
 @export var base_speed: float
@@ -22,6 +30,8 @@ class_name CharacterBodyData extends Resource
 @export var experience_value_range: Vector2 = Vector2(1.0, 1.0)
 
 @export_category("Violence")
+@export var seek_targets: bool = true
+@export var seek_player_over_bread: bool
 @export var attack_damage: float = 1.0
 @export var attack_rate: float = 1.0
 @export var attack_range: float = 1.0
@@ -32,6 +42,8 @@ class_name CharacterBodyData extends Resource
 @export var percent_armor: float
 
 @export_category("Eating Bread")
+@export var grabbable_bread_offset: Vector3
+@export var grabbable_bread_rotation: Vector3
 @export var eating_sounds_pool: SoundPoolData
 @export var time_to_eat: float = 1.0
 @export var eating_noise_cd: float = 0.25

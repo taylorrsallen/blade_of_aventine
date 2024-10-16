@@ -6,11 +6,13 @@ const DECORATION_TILE_DATABASE: DecorationTileDatabase = preload("res://resource
 
 const TILE_SETS: Array[BuildingTileSetData] = [
 	preload("res://resources/decoration_tiles/temple_tile_set.res"),
+	preload("res://resources/decoration_tiles/insulae_tile_set.res"),
 ]
 
 # (({[%%%(({[=======================================================================================================================]}))%%%]}))
 enum TileSetType {
 	TEMPLE,
+	INSULAE,
 }
 
 # (({[%%%(({[=======================================================================================================================]}))%%%]}))
@@ -35,7 +37,7 @@ func assemble() -> void:
 		var global_coord: Vector3 = global_position.floor() + Vector3(x, 0.0, z)
 		var tile_set: BuildingTileSetData = TILE_SETS[building_tile_set]
 		
-		var corner_terrain_id: int = 2
+		var corner_terrain_id: int = tile_set.corner_terrain_tile
 		var decoration_wall_height: int = TERRAIN_TILE_DATABASE.database[corner_terrain_id].height
 		var decoration_roof_height: int = decoration_wall_height + DECORATION_TILE_DATABASE.database[tile_set.roof_border_wall_00].height
 		
@@ -81,6 +83,7 @@ func assemble() -> void:
 		else:
 			## INTERIOR
 			_place_interior_roof(tile_set, Vector2i(x, z), global_coord, decoration_roof_height)
+			_place_interior_ceiling(tile_set, Vector2i(x, z), global_coord, decoration_wall_height)
 
 func _place_interior_roof(tile_set: BuildingTileSetData, local_coord: Vector2i, global_coord: Vector3, height: int) -> void:
 	var height_and_orientation: Vector2i = _get_roof_height_and_orientation(local_coord)
@@ -89,6 +92,45 @@ func _place_interior_roof(tile_set: BuildingTileSetData, local_coord: Vector2i, 
 		Util.main.level.set_decoration_tile_at_global_coord(tile_set.roof_center, global_coord, height + height_and_orientation.x, height_and_orientation.y)
 	else:
 		Util.main.level.set_decoration_tile_at_global_coord(tile_set.roof, global_coord, height + height_and_orientation.x, height_and_orientation.y)
+
+func _place_interior_ceiling(tile_set: BuildingTileSetData, local_coord: Vector2i, global_coord: Vector3, wall_height: int) -> void:
+	var ceiling_variation_value: int = local_coord.x
+	
+	if local_coord.x == 1:
+		## LEFT WALL
+		if local_coord.y == 1:
+			Util.main.level.set_decoration_tile_at_global_coord(tile_set.ceiling_corner, global_coord, wall_height, 1)
+		elif local_coord.y == building_dims.y - 2:
+			Util.main.level.set_decoration_tile_at_global_coord(tile_set.ceiling_corner, global_coord, wall_height, 3)
+		else:
+			Util.main.level.set_decoration_tile_at_global_coord(tile_set.ceiling_border, global_coord, wall_height, 3)
+	elif local_coord.y == 1:
+		## FRONT WALL
+		if local_coord.x == building_dims.x - 2:
+			Util.main.level.set_decoration_tile_at_global_coord(tile_set.ceiling_corner, global_coord, wall_height, 2)
+		else:
+			if building_orientation == 1 || building_orientation == 2:
+				if local_coord.x % 4 != 0:
+					Util.main.level.set_decoration_tile_at_global_coord(tile_set.ceiling_border, global_coord, wall_height, 1)
+			else:
+				Util.main.level.set_decoration_tile_at_global_coord(tile_set.ceiling_border, global_coord, wall_height, 1)
+	elif local_coord.x == building_dims.x - 2:
+		## RIGHT WALL
+		if local_coord.y == building_dims.y - 2:
+			Util.main.level.set_decoration_tile_at_global_coord(tile_set.ceiling_corner, global_coord, wall_height, 0)
+		else:
+			Util.main.level.set_decoration_tile_at_global_coord(tile_set.ceiling_border, global_coord, wall_height, 2)
+	elif local_coord.y == building_dims.y - 2:
+		## BACK WALL
+		if local_coord.x % 4 == 0:
+			Util.main.level.set_decoration_tile_at_global_coord(tile_set.ceiling_low_border, global_coord, wall_height, 3)
+		else:
+			Util.main.level.set_decoration_tile_at_global_coord(tile_set.ceiling_border, global_coord, wall_height, 0)
+	else:
+		if ceiling_variation_value % 4 == 0:
+			Util.main.level.set_decoration_tile_at_global_coord(tile_set.ceiling_low, global_coord, wall_height, 2)
+		else:
+			Util.main.level.set_decoration_tile_at_global_coord(tile_set.ceiling, global_coord, wall_height)
 
 func _place_wall_corner(tile_set: BuildingTileSetData, global_coord: Vector3, height: int, orientation: int) -> void:
 	Util.main.level.set_decoration_tile_at_global_coord(tile_set.roof_border_corner, global_coord, height, orientation)

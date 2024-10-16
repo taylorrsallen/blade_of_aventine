@@ -11,7 +11,10 @@ const GAME_PROGRESS_DATA_PATH: String = "user://game_progress.tres"
 
 # (({[%%%(({[=======================================================================================================================]}))%%%]}))
 @onready var level: Level = $Level
+@onready var directional_light_3d: DirectionalLight3D = $DirectionalLight3D
+@onready var world_environment: WorldEnvironment = $WorldEnvironment
 var spawn_point: Vector3 = Vector3.ZERO
+var extra_spawn_points: Array[Vector3] = [Vector3.ZERO, Vector3.ZERO, Vector3.ZERO]
 var game_progress_data: GameProgressData
 
 # (({[%%%(({[=======================================================================================================================]}))%%%]}))
@@ -34,6 +37,10 @@ func _ready() -> void:
 	#terrain_model.position.z = -10.0
 	#terrain_model.scale = Vector3.ONE * 0.1
 	#add_child(terrain_model)
+
+# (({[%%%(({[=======================================================================================================================]}))%%%]}))
+func save_game_progress_data() -> void:
+	ResourceSaver.save(game_progress_data, GAME_PROGRESS_DATA_PATH)
 
 func _load_game_progress_data() -> void:
 	if FileAccess.file_exists(GAME_PROGRESS_DATA_PATH):

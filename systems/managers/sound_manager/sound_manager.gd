@@ -2,12 +2,12 @@ extends Node
 
 # (({[%%%(({[=======================================================================================================================]}))%%%]}))
 enum BackgroundTrackLayer {
-	WIND_0,
-	WIND_1,
-	RAIN_0,
-	RAIN_1,
-	DRONE_0,
-	DRONE_1,
+	AMBIENCE_0,
+	AMBIENCE_1,
+	AMBIENCE_2,
+	AMBIENCE_3,
+	AMBIENCE_4,
+	AMBIENCE_5,
 	MUSIC_0,
 	MUSIC_1,
 	MUSIC_2,
@@ -147,6 +147,7 @@ func unpause_background_track(layer: int) -> void:
 	if background_tracks[layer]: background_tracks[layer].play()
 
 func fade_background_track(layer: int, fade_time: float = 5.0, start_db: float = 31.0, target_db: float = -40.0, erase_when_complete: bool = false) -> void:
+	if !background_tracks[layer]: return
 	var fade: BackgroundTrackFade = BackgroundTrackFade.new()
 	fade.bgt_layer = layer
 	fade.fade_time = fade_time

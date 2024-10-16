@@ -2,9 +2,7 @@ class_name GatewayBase extends Interactable
 
 # (({[%%%(({[=======================================================================================================================]}))%%%]}))
 @onready var portal_plane: MeshInstance3D = $PortalArea/PortalPlane
-@onready var portal_plane_2: MeshInstance3D = $PortalArea/PortalPlane/PortalPlane2
 @onready var portal_collision_shape_3d: CollisionShape3D = $PortalArea/PortalCollisionShape3D
-@onready var camera_3d: Camera3D = $SubViewport/Camera3D
 @onready var portal_area: Area3D = $PortalArea
 @export var data: GatewayData: set = _set_data
 
@@ -22,7 +20,6 @@ func _set_data(_data: GatewayData) -> void:
 	portal_collision_shape_3d.shape.size = Vector3(data.dims.x, data.dims.y, 0.0) - Vector3(0.25, 0.25, 0.0)
 	portal_collision_shape_3d.position = Vector3(data.dims.x, data.dims.y, 0.0) * 0.5 + Vector3.RIGHT * 0.125
 	
-	await get_tree().create_timer(1.0).timeout
 	var level_data: LevelData = Util.main.level.LEVEL_DATABASE.database[data.destination_level_id]
 	if level_data.required_level_id_to_be_played != -1 && !Util.main.game_progress_data.levels_beaten.has(level_data.required_level_id_to_be_played):
 		portal_plane.hide()
@@ -36,7 +33,6 @@ func _set_data(_data: GatewayData) -> void:
 # (({[%%%(({[=======================================================================================================================]}))%%%]}))
 func _ready() -> void:
 	portal_plane.mesh = portal_plane.mesh.duplicate()
-	portal_plane_2.mesh = portal_plane.mesh
 	
 	readied = true
 	data = data

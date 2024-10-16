@@ -4,10 +4,12 @@ class_name DamageData
 enum DamageType {
 	SHARP,
 	BLUNT,
+	ELEMENTAL,
 }
 
 enum DamageMaterial {
 	METAL,
+	FIRE,
 }
 
 @export var damage_type: DamageType

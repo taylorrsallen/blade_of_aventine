@@ -59,10 +59,27 @@ func _refresh() -> void:
 	for existing_recipe in BLOCK_RECIPE_DATABASE.database:
 		if existing_recipe.ingredients.size() == blocks.size():
 			var match_found: bool = true
-			for i in existing_recipe.ingredients.size():
-				if existing_recipe.ingredients[i] != blocks[i]:
+			var recipe_quantities: Dictionary = {}
+			for ingredient in existing_recipe.ingredients:
+				if !recipe_quantities.has(ingredient):
+					recipe_quantities[ingredient] = 1
+				else:
+					recipe_quantities[ingredient] += 1
+			
+			var block_pile_quantities: Dictionary = {}
+			for block in blocks:
+				if !block_pile_quantities.has(block):
+					block_pile_quantities[block] = 1
+				else:
+					block_pile_quantities[block] += 1
+			
+			for key in recipe_quantities.keys():
+				if !block_pile_quantities.has(key):
 					match_found = false
-					continue
+					break
+				if recipe_quantities[key] != block_pile_quantities[key]:
+					match_found = false
+					break
 			
 			if match_found:
 				found_recipe = existing_recipe
@@ -72,11 +89,13 @@ func _refresh() -> void:
 	else:
 		valid_recipe = null
 
-func try_craft() -> void:
-	if !valid_recipe: return
+func try_craft() -> bool:
+	if !valid_recipe: return false
+	EventBus.tower_built.emit()
 	var result: Interactable = valid_recipe.instantiate(global_position)
 	result.faction_id = faction_id
 	queue_free()
+	return true
 
 # (({[%%%(({[=======================================================================================================================]}))%%%]}))
 func damage(damage_data: DamageData, _source: Node) -> void:

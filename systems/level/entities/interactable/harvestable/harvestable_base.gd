@@ -44,7 +44,7 @@ func deal_scepter_damage() -> void:
 func destroy() -> void:
 	_destroy()
 	
-	data.pickup_drops.drop(global_position)
+	if data.pickup_drops: data.pickup_drops.drop(global_position)
 	
 	if !data.block_drops.is_empty():
 		var block_pile: BlockPile = BLOCK_PILE.instantiate()

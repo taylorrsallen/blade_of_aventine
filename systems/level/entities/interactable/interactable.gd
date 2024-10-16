@@ -71,6 +71,7 @@ func _update_thrown_state(delta: float) -> void:
 		if closest_hit.get_parent() is Interactable:
 			if interactable_data.break_when_thrown:
 				destroy()
+				_special_tumbling_interactable_collision(closest_hit.get_parent())
 				return
 			if _special_tumbling_interactable_collision(closest_hit.get_parent()): return
 			landed = true
@@ -115,6 +116,7 @@ func _update_thrown_state(delta: float) -> void:
 			Util.main.level.place_interactable_at_global_coord(landing_position, self)
 
 func _special_tumbling_interactable_collision(_interactable: Interactable) -> bool:
+	if _interactable.interactable_data.break_when_thrown: _interactable.destroy()
 	return false
 
 func set_grabbed(active: bool) -> void:

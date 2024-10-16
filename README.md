@@ -3,11 +3,11 @@ Orcus brings Commodus back to life and tasks him with defending the Roman cultur
 
 ## Models
 - Player
-    - Commodus
+	- Commodus
 - Gods
-    - Orcus
-    - Minerva
-    - Owl of Minerva
+	- Orcus
+	- Minerva
+	- Owl of Minerva
 
 ## Plot
 - Orcus gives you his speech the first time you launch the game
@@ -42,209 +42,222 @@ Orcus brings Commodus back to life and tasks him with defending the Roman cultur
 
 ## Dialogue
 - Orcus Resurrection
-    - Didst thou thinketh thine toils wouldst end, having passed drunk on thine degeneracy?
-    - Thinketh thine oaths free to be broken?
-    - Thou shalt suffer more false Heracles
+	- Didst thou thinketh thine toils wouldst end, having passed drunk on thine degeneracy?
+	- Thinketh thine oaths free to be broken?
+	- Thou shalt suffer more false Heracles
 
 ##
 - Towers
-    - Basic
-        - Arbalest
-            - Mid range, mid fire, mid damage, single target
-            - Ground & Air
-            - ~100 Value
-            - Wood/Bronze/Sinew
-        - Trebuchet
-            - Short range, slow fire, high damage, large AOE
-            - Ground only
-            - ~200 Value
-            - Wood/Wood/Sinew/Sinew/Marble
-        - Watch Tower
-            - Fast firing, but chooses targets randomly, mid range
-            - Slightly higher DPS than Arbalest, but no focus
-            - ~100 Value
-        - 
-    - Fire Arbalest
-        - Wood/Bronze/Sinew/Oil
-    - Greek Fire (flamethrower, short range, very fast fire, low damage, AOE and DOT)
-        - Bronze/Bronze/Oil
-    - Oil Hurler
-        - Medium Range, causes slow and bonus damage from fire
-        - Wood/Oil
+	- Basic
+		- Arbalest
+			- Mid range, mid fire, mid damage, single target
+			- Ground & Air
+			- ~100 Value
+			- Wood/Bronze/Sinew
+		- Trebuchet
+			- Short range, slow fire, high damage, large AOE
+			- Ground only
+			- ~200 Value
+			- Wood/Wood/Sinew/Sinew/Marble
+		- Watch Tower
+			- Fast firing, but chooses targets randomly, mid range
+			- Slightly higher DPS than Arbalest, but no focus
+			- ~100 Value
+		- 
+	- Fire Arbalest
+		- Wood/Bronze/Sinew/Oil
+	- Greek Fire (flamethrower, short range, very fast fire, low damage, AOE and DOT)
+		- Bronze/Bronze/Oil
+	- Oil Hurler
+		- Medium Range, causes slow and bonus damage from fire
+		- Wood/Oil
   
-    - Magic Missile (Arbalest with longer range & homing arrows)
-        - Wood/Bronze/Sinew/Magic
-    - Magic Beam
-        - Marble/Magic
+	- Magic Missile (Arbalest with longer range & homing arrows)
+		- Wood/Bronze/Sinew/Magic
+	- Magic Beam
+		- Marble/Magic
 
 ## TILE IDS
-0. temple_roof_border_corner
-6. temple_roof_border_wall_01
-7. temple_roof_border_wall_00
-8. temple_roof_border_end_00
-9. temple_roof_border_end_01
-10. temple_roof_border_inner
-11. temple_roof_border_inner_wall
-12. temple_roof_border_center
-13. temple_roof
-14. temple_roof_end
-15. temple_roof_center
-16. temple_roof_border_end_00_inverse
-17. temple_roof_border_end_01_inverse
-18. temple_roof_border_inner_inverse
-19. temple_roof_inverse
-20. temple_roof_end_inverse
+0. pillar
+1. wall
+2. roof
+3. roof_border_center
+4. roof_border_corner
+5. roof_border_end_00
+6. roof_border_end_00_inverse
+7. roof_border_end_01
+8. roof_border_end_01_inverse
+9. roof_border_inner
+10. roof_border_inner_inverse
+11. roof_border_inner_wall
+12. roof_border_wall_00
+13. roof_border_wall_01
+14. roof_center
+15. roof_end
+16. roof_end_inverse
+17. roof_inverse
+18. bricks_00
+19. dirt
+20. grass_00
+21. grass_00_001
+22. stairs_00
+23. stone_00
 
 ## Factions
 - Unwashed Masses
-    - [x] Filler: Peasant
-    - Tank: Deserter
-    - Fast: Rat
-    - Flyer: N/A
-    - Boss: Giant Rat
-    - Unique: Senatorae
-        - Low health, lots of money, high damage, medium speed, goes after player instead of bread
+	- [x] Filler: Peasant
+	- [x] Tank: Deserter
+	- [x] Fast: Rat
+	- Flyer: N/A
+	- Boss: Giant Rat
+	- Unique: Senatorae
+		- Low health, lots of money, high damage, medium speed, goes after player instead of bread
 - Franks
-    - Filler: Peasant
-    - Tank: Soldier
-    - Fast: Berserker
-    - Flyer: Hawk/Vulture
-    - Boss: Knight
+	- Filler: Peasant
+	- Tank: Soldier
+	- Fast: Berserker
+	- Flyer: Hawk/Vulture
+	- Boss: Knight
 - Roman Revolt
-    - Filler: Soldier
-    - Tank: Centurion
-    - Fast: Scout (on horse)
-    - Flyer: N/A
-    - Boss: Roman General
-    - Unique: Senatorae
+	- Filler: Soldier
+	- Tank: Centurion
+	- Fast: Scout (on horse)
+	- Flyer: N/A
+	- Boss: Roman General
+	- Unique: Senatorae
 - Scotts
-    - s
+	- s
 - Vandals
 
 ## TODO
 ### !!!!! IMPORTANT START !!!!!
-- Varying coin values are spawned based on the Roman currency
-- Special shiny effect for when an Aureus is dropped
+PEASANT HOUSES
+SENATORAE (ONLY TEXTURES LEFT)
+TOWER MODELS
+EMPEROR NEEDS A CROWN
+GATEWAY MODELS
+SHOP MODELS
+WAVE PREDICTOR OBJECT
+VOLUME SETTINGS MENU
+
+FINISH BUILDING ASSEMBLER CEILING
+Towers level too fast
+Only one player should be able to dance on a tower at a time
+Tower level up sound
+Tower max level banners
+Tower placing sfx
+
+
+^ THAT IS ALL THAT MATTERS ^
+
+### DONE START
+BODY DATA TOGGLE FOR SEARCH FOR TARGETS TO HIT
+### DONE END
+
+NEED Orcus model
+NEED doors
+NEED catapult model + anim
+NEED dart model
+NEED ballista model + anim
+SCALE UP Centurion and use him as the boss of level 3
+NEED wave predictor object
+
+
+- Door that is opened by walking into its area collider
+	- Is also an interactable that can be broken down
 
 - Faction units
-    - RAT BOSS
-    - ??? BOSS
-    - GERMAN KNIGHT BOSS
-
-- Towers have targeting priorities on which type of enemy they target first (TANK, FAST, NORMAL, FLYING)
-- Graphic to signify current tower level
-- Graphic to signify current tower exp
-- Graphic to signify current tower hp
+	- RAT BOSS
+	- ??? BOSS
+	- GERMAN KNIGHT BOSS
 
 - Volume in settings menu
 
-- Splitscreen
-    - Menu for adding/removing local players
-
 - Orcus
-    - Underworld gates which lead to levels
-    - Some NPCS that whine about their fate
-    - Orcus in his throne
-    - A rack that you can select different scepters from
-
-- Tutorial
-    - [Left Click / X (Sony) / A (XBOX)] to INTERACT
-        - Use it to LIFT and PLACE objects!
-    - [Right click / Circle (Sony) / B (XBOX)] to ATTACK
-        - Use it to break down that OLD TOWER!
-    - [E / Square (SONY) / X (XBOX)] to USE
-        - Use it to craft a tower once you have the correct combination of ingredients!
+	- Underworld gates which lead to levels
+		- [x] Functionality
+		- [x] Placed entity through image editor
+		- [ ] Art
+	- Some NPCS that whine about their fate
+	- Orcus in his throne
+	- A rack that you can select different scepters from
 
 - Models
-    - Characters
-        - [x] Emperor
-        - Merchant
-        - Orcus
-        - Athena
-        - General ? (who betrays you)
-    - Items
-        - Bread
-        - Coin
-    - Blocks
-        - Bronze
-        - [x] Marble
-        - Sinew
-        - Oil
-        - Magic
-    - Tiles
-        - Shop kiosk/cart
-        - Bread Pile
-        - [x] Pillars
-        - Harvestable
-            - Crate
-        - Temple
-            - [x] Roofing
-            - Walls
-            - Ceiling
-            - Door
-        - Peasant Buildings
-            - Roofing
-            - Walls
-            - Ceiling
-            - Door
-        - Roman flags
-    - Towers
-        - [x] Gun: Arbalest
-        - [ ] Gun: Catapult
-        - [ ] Gun: Dart
-        - [ ] Gun: Flamethrower
-        - [ ] Gun: 
-        - [x] Wood tall yaw pivot
-        - [ ] Wood short yaw pivot
-        - [ ] Bronze short yaw pivot
-        - [x] Wood large foundation
-        - [ ] Wood small foundation
-        - [ ] Marble large foundation
-        - [ ] Marble small foundation
-        - [ ] Bronze small foundation
-
-- Base Character Animations
-    - [x] Eat (eating 1 bread)
-    - [x] Walk
-    - [x] Attack
-    - [-] Hands up (grabbing)
-    - Stagger (damaged)
-    - [x] Die
-    - (If Time Allows): 'Damaged' Walk
-    - Dance (victory state)
-
-- Player Character Animations
-    - [x] Walk
-    - Sprint
-    - Attack
-    - Build (swing hammer)
-    - [x] Hands up (grabbing)
-    - [x] Place grabbed object
-    - Stagger (knocked back by contact with enemies)
-    - [x] Die (from tower friendly fire)
-    - Dance (leveling up towers)
-
-- Tower Animations
-    - Fire
-    - Reload
-    - [x] Damage
+	- Characters
+		- [x] Emperor
+		- Merchant
+		- Orcus
+		- Athena
+		- General ? (who betrays you)
+	- [x] Items
+		- [x] Bread
+		- [x] Coin
+	- Blocks
+		- [x] Bronze
+		- [x] Marble
+		- [x] Wood
+		- Magic
+		- Oil
+		<!-- - Sinew -->
+	- Tiles
+		- Shop kiosk/cart
+		- [x] Bread Pile
+		- [x] Pillars
+		- Harvestable
+			- Crate
+			- Sconce
+			- [x] Pot
+			- [x] Tree
+		- Temple
+			- [x] Roofing
+			- [x] Walls
+			- [x] Ceiling
+			- Door
+		- Peasant Buildings
+			- Roofing
+			- Walls
+			- Window walls
+			- Ceiling
+			- Door
+		- Roman flags
+	- Towers
+		- [x] Gun: Arbalest
+			- [x] Animations
+		- [ ] Gun: Catapult
+			- [ ] Animations
+		- [ ] Gun: Dart
+		- [ ] Gun: Flamethrower
+		- [ ] Gun: Watchtower
+		- [x] Wood tall yaw pivot
+		- [ ] Wood short yaw pivot
+		- [ ] Bronze short yaw pivot
+		- [x] Wood large foundation
+		- [ ] Wood small foundation
+		- [ ] Marble large foundation
+		- [ ] Marble small foundation
+		- [ ] Bronze small foundation
+	- Projectiles
+		- [x] Bolt
+		- [x] Rock (marble)
+		- [ ] AOE hit effect
 
 - Sprites
-    - "Build with E" animated sprite
-    - [x] Generic button
-    - [x] Generic menu frame
-    - HUD icons
-    - [x] Generic font
-    - Opening splash screen
+	- "Build with E" animated sprite
+	- [x] Generic button
+	- [x] Generic menu frame
+	- [x] HUD icons
+	- [x] Generic font
+	- Opening splash screen
 
 - Particles
-    - Character death (blood splatter?)
-    - Object placed (subtle dust scatter)
-    - Tower building (heavy dust that covers up the tower rising from the ground)
-    - Dust from sprinting
-    - Coin get
-    - Bread get
-    - Fire
+	- Character death (blood splatter?)
+	- Object placed (subtle dust scatter)
+	- Tower building (heavy dust that covers up the tower rising from the ground)
+	- Dust from sprinting
+	- Coin get
+	- Bread get
+	- Fire
+
 ### !!!!! IMPORTANT END !!!!!
 
 ### LESS IMPORTANT
@@ -255,20 +268,20 @@ Orcus brings Commodus back to life and tasks him with defending the Roman cultur
 - Action callouts ("Stop!" from centurions)
 
 - Broken towers
-    - Non-functional towers on maps at the start, break down for materials and space
+	- Non-functional towers on maps at the start, break down for materials and space
 
 - Happy dance for allied units upon victory
 
 - Skybox models
 
 - Debuffs
-    - Oiled: slow + bonus fire damage, used up by fire
-    - Fire: damage over time
+	- Oiled: slow + bonus fire damage, used up by fire
+	- Fire: damage over time
 
 ### IF I HAVE TIME
 - Tower States
-    - Pristine
-    - Damaged
+	- Pristine
+	- Damaged
 
 - Multiple scepters with different effects to choose from
 - Multiple dances with different effects to choose from
@@ -279,15 +292,78 @@ Orcus brings Commodus back to life and tasks him with defending the Roman cultur
 - Horn to interact with to bring enemy wave early
   
 - Not sure
-    - Put held exp into towers by standing next to them and holding E
-    - Take exp out of towers by hitting them with your scepter
-    - No tower friendly fire? (On second thought, maybe we keep it, it's kind of funny)
-
-- Book that shows discovered tower recipes and hints at non-secret recipes
+	- Put held exp into towers by standing next to them and holding E
+	- Take exp out of towers by hitting them with your scepter
+	- No tower friendly fire? (On second thought, maybe we keep it, it's kind of funny)
 
 - Difficulty
 
 ## TODO NO MORE
+### 10/14/24
++ Added tutorial ghosts to explain how the game works
++ Fixed GUI scaling issues with players menu
++ Coins now have sparkle effects so that they don't blend in with the terrain
++ Pickups no longer break if you die while midway through collecting them
++ Wood is now a limited resource that will limit how many towers you can make
++ You can now hit enemies with your scepter. It deals very low damage
++ Fixed a bug where the boss spawning caused all characters to no longer be able to walk up inclines (don't ask)
++ Level music doesn't start until the waves start
++ Waves don't start on level 1 until your first tower is built
++ Temples now have ceilings
++ Ghosts now disappear in a puff of smoke when hit or when finished speaking
++ Player Character Animations
+	+ [x] Walk
+	+ [x] Sprint
+	+ [x] Attack
+	+ [x] Build (swing hammer)
+	+ [x] Hands up (grabbing)
+	+ [x] Place grabbed object
+	+ [x] Stagger (knocked back by contact with enemies)
+	+ [x] Die (from tower friendly fire)
+	+ [x] Dance (leveling up towers)
++ Base Character Animations
+	+ [x] Eat (eating 1 bread)
+	+ [x] Walk
+	+ [x] Attack
+	+ [x] Stagger (damaged)
+	+ [x] Die
++ Added pigeon
++ Towers are now restricted to targeting ONLY_FLYING, ONLY_GROUND, or ALL
++ You can now hold tab to display all available tower recipes and controls
+
+### 10/13/24
++ Added splitscreen functionality
++ Added Players menu for adding/removing players and assigning control schemes
++ Added rat king boss
++ Range indicator for towers is a little more subtle and is always flush with the ground, regardless of tower height
++ You can now feed money to towers in order to level them up. They will drop half the money fed to them if they are destroyed
++ Fixed bug where towers didn't drop money fed to them when destroyed
++ Bronze modelled
+
+### 10/12/24
++ Varying coin values are spawned based on the Roman currency
++ Sharp tower projectiles now stay with enemies, till death do them part
++ Recipes are now order independant
++ Enemies now attack you if you get too close
++ Added bandits
++ Added rats
++ Arbalest towers now have sounds and animations
++ Towers now display their level and experience
++ Towers no longer deal exponential damage with each shot
++ Towers now correctly target enemies eating your bread
++ Bread now has a model
++ Breadpile now uses mini bread stacks to represent how much bread you have left
+
+---
+
++ Fixed an issue where towers couldn't shoot targets that were stuck attacking a tower because the towers were aiming at the targets projected velocity
++ Towers can now have unique targeting priorities. This means weaker towers will prioritize less armored targets over armored targets, arrow towers prefer faster targets, etc.
+
+---
+
++ Fixed a bug where objects would enter a glitched state if you died while holding them
++ Towers now display their level and experience
+
 ### 10/11/24
 + Towers now have range indicators when they are highlighted
 + Towers now get a range bonus the higher up they are placed
@@ -296,6 +372,7 @@ Orcus brings Commodus back to life and tasks him with defending the Roman cultur
 
 + Hitting building sound
 + Death sfx
++ A lot of art and bug fixing
 
 ### 10/10/24
 + Added footstep sfx for the player character
@@ -328,9 +405,9 @@ Orcus brings Commodus back to life and tasks him with defending the Roman cultur
 ---
 
 + HUD
-    + Coin count
-    + Wave indicator
-    + Bread count
+	+ Coin count
+	+ Wave indicator
+	+ Bread count
 + UI frames
 + UI buttons
 
@@ -375,9 +452,9 @@ Orcus brings Commodus back to life and tasks him with defending the Roman cultur
 
 ### 10/04/24
 + Music
-    + Level
-    + Boss
-    + Victory
+	+ Level
+	+ Boss
+	+ Victory
 
 + Smooth fades for background tracks
 
@@ -414,7 +491,7 @@ Orcus brings Commodus back to life and tasks him with defending the Roman cultur
 
 ### 10/03/24
 + Peasant
-    + Random peasant callouts
+	+ Random peasant callouts
 
 + Enemies drop resource for getting blocks (coins)
 

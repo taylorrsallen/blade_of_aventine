@@ -3,18 +3,19 @@ class_name TowerBase extends Interactable
 # (({[%%%(({[=======================================================================================================================]}))%%%]}))
 const BLOCK_PILE: PackedScene = preload("res://systems/level/entities/interactable/block_pile/block_pile.scn")
 const FACE_TARGET: PackedScene = preload("res://systems/common/face_target/face_target.scn")
+const PICKUP: PackedScene = preload("res://systems/level/entities/pickup/pickup.scn")
 
-const LEVEL_COLORS: Array[Color] = [
-	Color8(157, 157, 157),
+const LEVEL_FLAG_COLORS: Array[Color] = [
 	Color8(255, 255, 255),
-	Color8(30, 255, 0),
-	Color8(0, 112, 221),
-	Color8(163, 53, 238),
-	Color8(255, 128, 0),
+	Color8(75, 181, 70),
+	Color8(58, 129, 199),
+	Color8(183, 64, 48),
+	Color8(255, 190, 0)
 ]
 
 # (({[%%%(({[=======================================================================================================================]}))%%%]}))
 @onready var range_indicator: MeshInstance3D = $RangeIndicator
+@onready var tower_level_pole: TowerLevelPole = $TowerLevelPole
 
 var type_data: TowerTypeData: set = _set_type_data
 
@@ -58,10 +59,16 @@ var scepter_damage: float
 
 var readied: bool
 
+var targeting_preference: TowerTypeData.TargetingPreference
+
+var money_fed: int
+
 func _set_type_data(_type_data: TowerTypeData) -> void:
 	type_data = _type_data
 	
 	if !readied: return
+	
+	targeting_preference = type_data.targeting_preference
 	
 	if type_data.foundation_scene:
 		if is_instance_valid(foundation): foundation.queue_free()
@@ -100,6 +107,7 @@ func _set_type_data(_type_data: TowerTypeData) -> void:
 
 # (({[%%%(({[=======================================================================================================================]}))%%%]}))
 func _ready() -> void:
+	tower_level_pole.flag_color = LEVEL_FLAG_COLORS[0]
 	$InteractableCollider/CollisionShape3D.shape = $InteractableCollider/CollisionShape3D.shape.duplicate()
 	$RangeIndicator.mesh = $RangeIndicator.mesh.duplicate()
 	
@@ -114,15 +122,15 @@ func _ready() -> void:
 	global_position.y = -(foundation.height + yaw_pivot_model.height)
 	
 	position_to_protect = Util.main.level.centered_global_coord_from_local_coord(Util.main.level.faction_base_local_coords[faction_id])
-	protect_position = true
 
 func _physics_process(delta: float) -> void:
 	if !try_build_tower(delta): return
 	_update(delta)
 	
-	if !is_instance_valid(target): return
 	
 	if _try_fire():
+		if !is_instance_valid(target): return
+		
 		target_aim_point = _get_aim_point()
 		yaw_pivot.face_point(target_aim_point, delta * type_data.level_blueprints[level].move_speed_multiplier)
 		
@@ -136,14 +144,17 @@ func _physics_process(delta: float) -> void:
 
 # (({[%%%(({[=======================================================================================================================]}))%%%]}))
 func _fire_projectile() -> void:
+	pitch_pivot_model.fire()
 	firing = false
-	if type_data.projectile_sound: SoundManager.play_pitched_3d_sfx(type_data.projectile_sound.id, type_data.projectile_sound.type, global_position, 0.9, 1.1, 0.0, 5.0)
+	if type_data.fire_sound: SoundManager.play_pitched_3d_sfx(type_data.fire_sound.id, type_data.fire_sound.type, global_position, 0.9, 1.1, 0.0, 5.0)
 	pitch_pivot_model.projectile_emitter.hide()
 	
 	var arrow: ProjectileBase = type_data.projectile.instantiate()
 	
-	arrow.data = type_data.projectile_data
-	arrow.data.damage_data.damage_strength *= type_data.level_blueprints[level].damage_multiplier
+	var arrow_data: ProjectileData = type_data.projectile_data.duplicate()
+	arrow_data.damage_data = type_data.projectile_data.damage_data.duplicate()
+	arrow_data.damage_data.damage_strength *= type_data.level_blueprints[level].damage_multiplier
+	arrow.data = arrow_data
 	arrow.data.speed = type_data.level_blueprints[level].projectile_speed
 	
 	arrow.position = pitch_pivot_model.projectile_emitter.global_position
@@ -158,6 +169,8 @@ func _fire_projectile() -> void:
 
 # (({[%%%(({[=======================================================================================================================]}))%%%]}))
 func _update(delta: float) -> void:
+	if is_instance_valid(target): DebugDraw3D.draw_sphere(target.global_position, 0.5, Color.RED, delta)
+	
 	if health < type_data.level_blueprints[level].max_health:
 		health = min(health + delta, type_data.level_blueprints[level].max_health)
 	
@@ -171,7 +184,11 @@ func _update(delta: float) -> void:
 
 func _update_target_seeking(delta: float) -> void:
 	if !type_data.seek_targets: return
-	firing_timer = min(firing_cd, firing_timer + delta * type_data.level_blueprints[level].attack_speed_multiplier)
+	if !firing:
+		firing_timer = min(firing_cd, firing_timer + delta * type_data.level_blueprints[level].attack_speed_multiplier)
+		pitch_pivot_model.reload_percent = firing_timer / firing_cd
+	else:
+		pitch_pivot_model.reload_percent = 1.0
 	if !type_data.shoot_while_held && grabbed: return
 	_update_enemy_area_query(delta)
 
@@ -179,9 +196,9 @@ func _try_fire() -> bool:
 	if !type_data.shoot_while_held && grabbed: return false
 	if firing: return true
 	if firing_timer >= firing_cd:
+		_reload()
 		firing_timer = 0.0
 		firing = true
-		_reload()
 		return true
 	else:
 		return false
@@ -203,6 +220,7 @@ func try_build_tower(delta: float) -> bool:
 			position = start_position
 			current_animation_position = start_position
 			if type_data.seek_targets: firing_timer = firing_cd
+			Util.main.level.place_interactable_at_global_coord(global_position, self)
 			built = true
 			return true
 		else:
@@ -251,6 +269,14 @@ func destroy() -> void:
 		Util.main.level.add_tile_entity(block_pile)
 		for ingredient in recipe.ingredients:
 			block_pile.add_block(ingredient)
+	
+	var source_position: Vector3 = global_position
+	var coins_to_spawn: Array[PickupData] = CoinSpawner.get_coins_for_amount(money_fed * 0.5)
+	for coin in coins_to_spawn:
+		var pickup: Pickup = PICKUP.instantiate()
+		pickup.pickup_data = coin
+		pickup.position = source_position
+		Util.main.level.add_pickup(pickup)
 
 # (({[%%%(({[=======================================================================================================================]}))%%%]}))
 func add_experience(_experience: float) -> void:
@@ -262,7 +288,14 @@ func add_experience(_experience: float) -> void:
 		$RangeIndicator.mesh.top_radius = effective_range
 		experience = 0.0
 	
-	print("Experience: %s | Level: %s" % [experience, level])
+	if level + 1 == type_data.level_blueprints.size():
+		tower_level_pole.experience_percent = 1.0
+		tower_level_pole.experience_color = Color8(255, 190, 0)
+	else:
+		tower_level_pole.experience_percent = experience / (type_data.exp_needed_for_first_level + type_data.extra_exp_requirement_per_level * level)
+		tower_level_pole.experience_color = Color.GREEN
+	tower_level_pole.flag_color = LEVEL_FLAG_COLORS[level]
+	#print("Experience: %s | Level: %s" % [experience, level])
 
 # (({[%%%(({[=======================================================================================================================]}))%%%]}))
 func _update_enemy_area_query(delta: float) -> void:
@@ -276,58 +309,191 @@ func _update_enemy_area_query(delta: float) -> void:
 func update_area_query(results: Array[PhysicsBody3D]) -> void:
 	enemies = []
 	for result in results:
-		if !is_instance_valid(result): continue
-		if result.team != team: enemies.append(result)
+		if !is_instance_valid(result) || result.team == team: continue
+		if type_data.targeting_type == TowerTypeData.TargetingType.ALL:
+			enemies.append(result)
+		elif type_data.targeting_type == TowerTypeData.TargetingType.GROUND_ONLY && result.body_data.body_type == CharacterBodyData.BodyType.GROUND:
+			enemies.append(result)
+		elif type_data.targeting_type == TowerTypeData.TargetingType.FLYING_ONLY && result.body_data.body_type == CharacterBodyData.BodyType.FLYING:
+			enemies.append(result)
 	
-	target = get_closest_enemy()
+	target = get_best_target()
 
-func get_closest_enemy() -> Character:
-	var closest_enemy: Character = null
-	var closest_distance: float = 9999.0
-	
-	#DebugDraw3D.draw_line(position_to_protect, position_to_protect + Vector3.UP * 20.0, Color.RED, 0.016)
-	
+func get_best_target() -> Character:
 	var enemies_with_bread: Array[Character] = []
 	for enemy in enemies:
 		if !is_instance_valid(enemy): continue
 		if enemy.grabbed_entity: enemies_with_bread.append(enemy)
 	
-	if enemies_with_bread.is_empty():
-		if !protect_position:
-			for enemy in enemies:
-				if !is_instance_valid(enemy): continue
-				var distance: float = global_position.distance_to(enemy.global_position)
-				if distance < closest_distance:
-					closest_distance = distance
-					closest_enemy = enemy
-		else:
-			for enemy in enemies:
-				if !is_instance_valid(enemy): continue
-				var distance: float = position_to_protect.distance_to(enemy.global_position)
-				if distance < closest_distance:
-					closest_distance = distance
-					closest_enemy = enemy
-	else:
-		if !protect_position:
-			for enemy in enemies:
-				var distance: float = global_position.distance_to(enemy.global_position)
-				if distance < closest_distance:
-					closest_distance = distance
-					closest_enemy = enemy
-		else:
-			# We want the enemy with bread that is FURTHEST from our base
-			closest_distance = -1.0
-			for enemy in enemies:
-				var distance: float = position_to_protect.distance_to(enemy.global_position)
-				if distance > closest_distance:
-					closest_distance = distance
-					closest_enemy = enemy
+	if enemies_with_bread.is_empty(): return _get_best_target_from_array(enemies)
+	return _get_best_target_from_array(enemies_with_bread)
+
+func _get_best_target_from_array(search_array: Array[Character]) -> Character:
+	match targeting_preference:
+		TowerTypeData.TargetingPreference.HIGHEST_HP: return _get_highest_hp_target_from_array(search_array)
+		TowerTypeData.TargetingPreference.LOWEST_HP: return _get_lowest_hp_target_from_array(search_array)
+		TowerTypeData.TargetingPreference.HIGHEST_ARMOR: return _get_highest_armor_target_from_array(search_array)
+		TowerTypeData.TargetingPreference.LOWEST_ARMOR: return _get_lowest_armor_target_from_array(search_array)
+		TowerTypeData.TargetingPreference.FASTEST: return _get_highest_speed_target_from_array(search_array)
+		TowerTypeData.TargetingPreference.SLOWEST: return _get_lowest_speed_target_from_array(search_array)
+		TowerTypeData.TargetingPreference.RANDOM: return _get_random_target_from_array(search_array)
+		TowerTypeData.TargetingPreference.FURTHEST: return _get_furthest_target_from_array(search_array)
+		_: return _get_closest_target_from_array(search_array)
+
+func _get_highest_hp_target_from_array(search_array: Array[Character]) -> Character:
+	var best_target: Character = null
+	var highest_hp: float = 0.0
+	var closest_distance: float = 10000.0
 	
-	return closest_enemy
+	for potential_target in search_array:
+		if !is_instance_valid(potential_target): continue
+		if potential_target.health > highest_hp:
+			best_target = potential_target
+			highest_hp = potential_target.health
+			closest_distance = position_to_protect.distance_to(potential_target.global_position)
+		elif potential_target.health == highest_hp:
+			var distance: float = position_to_protect.distance_to(potential_target.global_position)
+			if distance < closest_distance:
+				best_target = potential_target
+				highest_hp = potential_target.health
+				closest_distance = distance
+	
+	return best_target
+
+func _get_lowest_hp_target_from_array(search_array: Array[Character]) -> Character:
+	var best_target: Character = null
+	var lowest_hp: float = 10000.0
+	var closest_distance: float = 10000.0
+	
+	for potential_target in search_array:
+		if !is_instance_valid(potential_target): continue
+		if potential_target.health < lowest_hp:
+			best_target = potential_target
+			lowest_hp = potential_target.health
+			closest_distance = position_to_protect.distance_to(potential_target.global_position)
+		elif potential_target.health == lowest_hp:
+			var distance: float = position_to_protect.distance_to(potential_target.global_position)
+			if distance < closest_distance:
+				best_target = potential_target
+				lowest_hp = potential_target.health
+				closest_distance = distance
+	
+	return best_target
+
+func _get_highest_armor_target_from_array(search_array: Array[Character]) -> Character:
+	var best_target: Character = null
+	var highest_armor: float = 0.0
+	var closest_distance: float = 10000.0
+	
+	for potential_target in search_array:
+		if !is_instance_valid(potential_target): continue
+		if potential_target.body_data.flat_armor > highest_armor:
+			best_target = potential_target
+			highest_armor = potential_target.body_data.flat_armor
+			closest_distance = position_to_protect.distance_to(potential_target.global_position)
+		elif potential_target.body_data.flat_armor == highest_armor:
+			var distance: float = position_to_protect.distance_to(potential_target.global_position)
+			if distance < closest_distance:
+				best_target = potential_target
+				highest_armor = potential_target.body_data.flat_armor
+				closest_distance = distance
+	
+	return best_target
+
+func _get_lowest_armor_target_from_array(search_array: Array[Character]) -> Character:
+	var best_target: Character = null
+	var lowest_armor: float = 10000.0
+	var closest_distance: float = 10000.0
+	
+	for potential_target in search_array:
+		if !is_instance_valid(potential_target): continue
+		if potential_target.body_data.flat_armor < lowest_armor:
+			best_target = potential_target
+			lowest_armor = potential_target.body_data.flat_armor
+			closest_distance = position_to_protect.distance_to(potential_target.global_position)
+		elif potential_target.body_data.flat_armor == lowest_armor:
+			var distance: float = position_to_protect.distance_to(potential_target.global_position)
+			if distance < closest_distance:
+				best_target = potential_target
+				lowest_armor = potential_target.body_data.flat_armor
+				closest_distance = distance
+	
+	return best_target
+
+func _get_highest_speed_target_from_array(search_array: Array[Character]) -> Character:
+	var best_target: Character = null
+	var highest_speed: float = 0.0
+	var closest_distance: float = 10000.0
+	
+	for potential_target in search_array:
+		if !is_instance_valid(potential_target): continue
+		if potential_target.body_data.base_speed > highest_speed:
+			best_target = potential_target
+			highest_speed = potential_target.body_data.base_speed
+			closest_distance = position_to_protect.distance_to(potential_target.global_position)
+		elif potential_target.body_data.base_speed == highest_speed:
+			var distance: float = position_to_protect.distance_to(potential_target.global_position)
+			if distance < closest_distance:
+				best_target = potential_target
+				highest_speed = potential_target.body_data.base_speed
+				closest_distance = distance
+	
+	return best_target
+
+func _get_lowest_speed_target_from_array(search_array: Array[Character]) -> Character:
+	var best_target: Character = null
+	var lowest_speed: float = 10000.0
+	var closest_distance: float = 10000.0
+	
+	for potential_target in search_array:
+		if !is_instance_valid(potential_target): continue
+		if potential_target.body_data.base_speed < lowest_speed:
+			best_target = potential_target
+			lowest_speed = potential_target.body_data.base_speed
+			closest_distance = position_to_protect.distance_to(potential_target.global_position)
+		elif potential_target.body_data.base_speed == lowest_speed:
+			var distance: float = position_to_protect.distance_to(potential_target.global_position)
+			if distance < closest_distance:
+				best_target = potential_target
+				lowest_speed = potential_target.body_data.base_speed
+				closest_distance = distance
+	
+	return best_target
+
+func _get_random_target_from_array(search_array: Array[Character]) -> Character:
+	## May need to add some sorting so that this doesn't pick recently deceased targets
+	if search_array.is_empty(): return null
+	return search_array.pick_random()
+
+func _get_furthest_target_from_array(search_array: Array[Character]) -> Character:
+	var best_target: Character = null
+	var furthest_distance: float = 0.0
+	
+	for potential_target in search_array:
+		if !is_instance_valid(potential_target): continue
+		var distance: float = position_to_protect.distance_to(potential_target.global_position)
+		if distance > furthest_distance:
+			furthest_distance = distance
+			best_target = potential_target
+	
+	return best_target
+
+func _get_closest_target_from_array(search_array: Array[Character]) -> Character:
+	var best_target: Character = null
+	var closest_distance: float = 10000.0
+	
+	for potential_target in search_array:
+		if !is_instance_valid(potential_target): continue
+		var distance: float = position_to_protect.distance_to(potential_target.global_position)
+		if distance < closest_distance:
+			closest_distance = distance
+			best_target = potential_target
+	
+	return best_target
 
 # (({[%%%(({[=======================================================================================================================]}))%%%]}))
 func _get_aim_point() -> Vector3:
-	if !target.has_method("get_velocity"): return target.global_position + Vector3.UP * 0.5
+	if !target.has_method("get_velocity") || !type_data.projectile_data.perfect_accuracy: return target.global_position + Vector3.UP * 0.5
 	
 	var pti: Vector3 = target.global_position + Vector3.UP * 0.5
 	var pbi: Vector3 = pitch_pivot_model.projectile_emitter.global_position

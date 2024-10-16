@@ -14,3 +14,8 @@ func interact(source: Character, controller: PlayerController) -> void:
 # (({[%%%(({[=======================================================================================================================]}))%%%]}))
 func give_coins_for_block(_block_data: BlockData, character: Character) -> void:
 	buy_block_from_character.emit(_block_data, character)
+
+func will_buy(block_pile: BlockPile) -> bool:
+	for item in get_parent().get_parent().data.items_that_shop_will_buy:
+		if item == block_pile.blocks[0]: return true
+	return false

@@ -1,0 +1,38 @@
+[remap]
+
+importer="texture"
+type="CompressedTexture2D"
+uid="uid://d00oyv8sns3mt"
+path.s3tc="res://.godot/imported/interested_eyes_faces.png-ad821bbf5aae8e4054d91e92436e9b01.s3tc.ctex"
+metadata={
+"imported_formats": ["s3tc_bptc"],
+"vram_texture": true
+}
+generator_parameters={
+"md5": "d0134ba1d7b6518460b9f4b1c6192676"
+}
+
+[deps]
+
+source_file="res://assets/models/ghost/interested_eyes_faces.png"
+dest_files=["res://.godot/imported/interested_eyes_faces.png-ad821bbf5aae8e4054d91e92436e9b01.s3tc.ctex"]
+
+[params]
+
+compress/mode=2
+compress/high_quality=false
+compress/lossy_quality=0.7
+compress/hdr_compression=1
+compress/normal_map=0
+compress/channel_pack=0
+mipmaps/generate=true
+mipmaps/limit=-1
+roughness/mode=0
+roughness/src_normal=""
+process/fix_alpha_border=true
+process/premult_alpha=false
+process/normal_map_invert_y=false
+process/hdr_as_srgb=false
+process/hdr_clamp_exposure=false
+process/size_limit=0
+detect_3d/compress_to=0

@@ -27,6 +27,9 @@ const HUD_GUI: PackedScene = preload("res://systems/gui/hud/hud.scn")
 
 const START_MENU: PackedScene = preload("res://systems/gui/menus/start_menu.scn")
 
+const AS: PickupData = preload("res://resources/pickups/coins/as.res")
+const PICKUP: PackedScene = preload("res://systems/level/entities/pickup/pickup.scn")
+
 # (({[%%%(({[=======================================================================================================================]}))%%%]}))
 ## COMPOSITION
 @onready var multiplayer_synchronizer: MultiplayerSynchronizer = $MultiplayerSynchronizer
@@ -38,11 +41,13 @@ const START_MENU: PackedScene = preload("res://systems/gui/menus/start_menu.scn"
 var local_id: int
 
 ## INPUT
+var controls_assigned: int = -1
+var device_assigned: int = -1
+
 @export var perspective: Perspective: set = _set_perspective
 
 @export var raw_move_input: Vector3
 @export var world_move_input: Vector3
-@export var look_input: Vector2
 @export var desired_facing: Vector3
 
 var previous_cursor_pos: Vector2
@@ -79,12 +84,16 @@ var hud: HUDGui
 ## CHARACTER
 @export var body_data: CharacterBodyData
 @export var character: Character
-@export var respawn_cd: float = 5.0
+@export var respawn_cd: float = 7.0
 var respawn_timer: float
 
 @export var dance_exp: float = 1.0
 @export var dance_exp_cd: float = 0.2
 var dance_exp_timer: float
+
+var money_feed_target: Interactable
+var money_feed_cd: float = 0.1
+var money_feed_timer: float
 
 ## GAME DATA
 @export var game_resources: GameResources
@@ -112,11 +121,13 @@ func init() -> void:
 	Util.main.game_started.connect(_on_game_started)
 	
 	spawn_camera_rig()
-	_assign_default_keyboard_controls(0, 0)
-	set_cursor_captured()
+	if local_id == 0:
+		assign_default_controls(0)
+		set_cursor_captured()
+		EventBus.bread_lost.connect(_on_bread_lost)
 
 func _physics_process(delta: float) -> void:
-	if Util.main.level.started && !Util.main.level.no_waves && game_resources.bread == 0:
+	if local_id == 0 && Util.main.level.level_started && !Util.main.level.no_waves && game_resources.bread == 0:
 		Util.main.level.unload()
 		Util.main.level.load_from_level_id(1)
 	
@@ -125,35 +136,47 @@ func _physics_process(delta: float) -> void:
 	#if Input.is_action_just_pressed("toggle_perspective_" + str(local_id)):
 		#perspective = Perspective.FPS if perspective == Perspective.TPS else Perspective.TPS
 	
-	if !get_window().has_focus():
-		set_cursor_visible()
-	elif menu_view.get_children().is_empty():
-		if is_flag_on(PlayerControllerFlag.CURSOR_VISIBLE): set_cursor_captured()
-	else:
-		set_cursor_visible()
-	
-	if Input.is_action_just_pressed("start_0"):
-		if menu_view.get_children().is_empty():
-			menu_view.add_child(START_MENU.instantiate())
+	if local_id == 0:
+		if !get_window().has_focus():
+			set_cursor_visible()
+		elif menu_view.get_children().is_empty():
+			if is_flag_on(PlayerControllerFlag.CURSOR_VISIBLE): set_cursor_captured()
 		else:
-			for child in menu_view.get_children():
-				child.go_back()
+			set_cursor_visible()
+	
+		if Input.is_action_just_pressed("start_0"):
+			if menu_view.get_children().is_empty():
+				menu_view.add_child(START_MENU.instantiate())
+			else:
+				for child in menu_view.get_children():
+					child.go_back()
 	
 	if is_instance_valid(camera_rig):
-		if Input.is_action_just_released("zoom_in_0"):
-			camera_rig.zoom = clampf(camera_rig.zoom - 0.5, 0.5, 7.0)
-		elif Input.is_action_just_released("zoom_out_0"):
-			camera_rig.zoom = clampf(camera_rig.zoom + 0.5, 0.5, 7.0)
+		const ZOOM_BOUNDS: Vector2 = Vector2(0.5, 15.0)
+		if local_id == 0:
+			if Input.is_action_just_released("zoom_in_" + str(local_id)):
+				camera_rig.zoom = clampf(camera_rig.zoom - 0.5, ZOOM_BOUNDS.x, ZOOM_BOUNDS.y)
+			elif Input.is_action_just_released("zoom_out_" + str(local_id)):
+				camera_rig.zoom = clampf(camera_rig.zoom + 0.5, ZOOM_BOUNDS.x, ZOOM_BOUNDS.y)
+		else:
+			if Input.is_action_pressed("zoom_in_" + str(local_id)):
+				camera_rig.zoom = clampf(camera_rig.zoom - 3.0 * delta, ZOOM_BOUNDS.x, ZOOM_BOUNDS.y)
+			elif Input.is_action_pressed("zoom_out_" + str(local_id)):
+				camera_rig.zoom = clampf(camera_rig.zoom + 3.0 * delta, ZOOM_BOUNDS.x, ZOOM_BOUNDS.y)
 		
 		if !is_flag_on(PlayerControllerFlag.CURSOR_VISIBLE):
-			var cursor_movement: Vector2 = (get_viewport().size * 0.5).floor() - get_viewport().get_mouse_position()
-			get_viewport().warp_mouse((get_viewport().size * 0.5).floor())
-			camera_rig.apply_inputs(raw_move_input, cursor_movement, delta)
+			var look_movement: Vector2 = Vector2.ZERO
+			if local_id == 0:
+				var cursor_movement: Vector2 = (get_viewport().size * 0.5).floor() - get_viewport().get_mouse_position()
+				get_viewport().warp_mouse((get_viewport().size * 0.5).floor())
+				look_movement += cursor_movement
+			
+			var gamepad_look_input: Vector2 = Input.get_vector("look_left_" + str(local_id), "look_right_" + str(local_id), "look_down_" + str(local_id), "look_up_" + str(local_id)) * 4.0 * camera_rig.gamepad_look_sensitivity
+			gamepad_look_input.x = -gamepad_look_input.x
+			look_movement += gamepad_look_input
+			
+			camera_rig.apply_inputs(raw_move_input, look_movement, delta)
 			camera_rig.apply_camera_rotation()
-			look_input = Vector2.ZERO
-			_update_focus()
-		else:
-			_update_cursor_pos()
 		
 	if is_instance_valid(character):
 		_update_selection()
@@ -167,26 +190,16 @@ func _physics_process(delta: float) -> void:
 		for pickup_body in AreaQueryManager.query_area(character.global_position, 5.0, 8):
 			pickup_body.get_parent().take(character)
 		
-		if is_instance_valid(focus_world_entity) && focus_world_pos.distance_to(character.get_body_center_pos()) < 2.0:
-			can_interact = true
-		else:
-			can_interact = false
-		
 		_update_character_input(delta)
+		_update_money_feed_target(delta)
 		_update_hud()
 		
-		if perspective == Perspective.FPS:
-			character.face_direction(camera_rig.get_yaw_forward(), delta)
-		else:
-			character.face_direction(world_move_input, delta)
+		character.face_direction(world_move_input, delta)
 	else:
 		respawn_timer += delta
 		if respawn_timer >= respawn_cd:
 			respawn_character()
 			respawn_timer = 0.0
-
-func _unhandled_input(event: InputEvent) -> void:
-	if event is InputEventMouseMotion: look_input = Vector2(-event.relative.x, -event.relative.y)
 
 func _dance_for_me(delta: float) -> void:
 	if !character.grabbed_entity && is_instance_valid(focused_interactable) && focused_interactable is TowerBase && focused_interactable.built:
@@ -239,6 +252,26 @@ func _update_selection() -> void:
 	else:
 		selection_cursor.visible = false
 
+func _update_money_feed_target(delta: float) -> void:
+	if !is_instance_valid(money_feed_target): return
+	if focused_interactable == money_feed_target && Input.is_action_pressed("interact_" + str(local_id)):
+		money_feed_timer = min(money_feed_timer + delta, money_feed_cd)
+		if game_resources.coins > 0 && money_feed_timer == money_feed_cd:
+			if money_feed_target is TowerBase:
+				if money_feed_target.level == money_feed_target.type_data.level_blueprints.size() - 1:
+					money_feed_target = null
+					return
+				money_feed_target.add_experience(0.5)
+				money_feed_target.money_fed += 1.0
+			game_resources.coins -= 1
+			var pickup: Pickup = PICKUP.instantiate()
+			pickup.position = character.global_position
+			pickup.pickup_data = AS
+			Util.main.level.add_pickup(pickup)
+			pickup.take(money_feed_target)
+	else:
+		money_feed_target = null
+
 # (({[%%%(({[=======================================================================================================================]}))%%%]}))
 func is_flag_on(flag: PlayerControllerFlag) -> bool: return Util.is_flag_on(flags, flag)
 func set_flag_on(flag: PlayerControllerFlag) -> void: flags = Util.set_flag_on(flags, flag)
@@ -274,12 +307,20 @@ func update_area_query(results: Array[PhysicsBody3D]) -> void:
 
 # (({[%%%(({[=======================================================================================================================]}))%%%]}))
 func _update_hud() -> void:
-	if !game_resources: return
-	hud.coins_label.text = str(game_resources.coins)
-	hud.bread_label.text = str(game_resources.bread)
-	#if Util.main.level.faction_bread_piles.is_empty(): return
-	#var bread_pile: BreadPile = Util.main.level.faction_bread_piles[0]
-	#if is_instance_valid(bread_pile): DebugDraw2D.set_text("Bread in Pile: ", bread_pile.bread_count, 2, Color.SANDY_BROWN)
+	if !is_instance_valid(hud): return
+	if Input.is_action_pressed("recipes_" + str(local_id)):
+		hud.recipes.show()
+	else:
+		hud.recipes.hide()
+	
+	if local_id == 0:
+		if !game_resources: return
+		hud.coins_label.text = str(game_resources.coins)
+		hud.bread_label.text = str(game_resources.bread)
+	else:
+		if !game_resources || !Util.player.game_resources: return
+		hud.coins_label.text = str(game_resources.coins)
+		hud.bread_label.text = str(Util.player.game_resources.bread)
 
 # (({[%%%(({[=======================================================================================================================]}))%%%]}))
 func _update_character_input(_delta: float) -> void:
@@ -312,7 +353,7 @@ func _primary() -> void:
 				SoundManager.play_3d_sfx(3, SoundDatabase.SoundType.SFX_FOLEY, character.global_position + Vector3.UP * 0.5)
 				character.grab_entity(focused_interactable.take_block())
 			elif focused_interactable is TowerBase:
-				if focused_interactable.built:
+				if focused_interactable.built && focused_interactable.interactable_data.liftable:
 					SoundManager.play_3d_sfx(3, SoundDatabase.SoundType.SFX_FOLEY, character.global_position + Vector3.UP * 0.5)
 					character.grab_entity(focused_interactable)
 			elif focused_interactable.interactable_data.liftable:
@@ -331,6 +372,25 @@ func _secondary() -> void:
 			entity_to_throw.collider_that_threw_me = character
 			return
 	elif character.try_attack():
+		var check_for_characters_global_coord: Vector3 = character.global_position - character.body_container.global_basis.z * 0.5
+		var other_characters: Array[PhysicsBody3D] = AreaQueryManager.query_area(check_for_characters_global_coord, 1.5, 2, [character])
+		
+		var closest_character: Character = null
+		var closest_distance: float = 100.0
+		for other_character in other_characters:
+			if !is_instance_valid(character): continue
+			var distance: float = character.global_position.distance_to(other_character.global_position)
+			if distance < closest_distance:
+				closest_character = other_character
+				closest_distance = distance
+		
+		if is_instance_valid(closest_character):
+			SoundManager.play_pitched_3d_sfx(29 + randi_range(0, 1), SoundDatabase.SoundType.SFX_FOLEY, character.global_position + Vector3.UP * 0.5, 0.9, 1.1, -10.0)
+			
+			var damage_data: DamageData = DamageData.new()
+			damage_data.damage_strength = 0.5
+			closest_character.damage(damage_data, character)
+		
 		if !is_instance_valid(focused_interactable): return
 		if focused_interactable is TowerBase && focused_interactable.built:
 			focused_interactable.deal_scepter_damage()
@@ -341,19 +401,24 @@ func _interact() -> void:
 	if is_instance_valid(character.grabbed_entity): return
 	if !is_instance_valid(focused_interactable): return
 	if focused_interactable is BlockPile:
-		focused_interactable.try_craft()
+		if focused_interactable.try_craft():
+			character.body.special()
+			SoundManager.play_pitched_3d_sfx(27, SoundDatabase.SoundType.SFX_FOLEY, character.global_position + Vector3.UP * 0.5)
+	elif focused_interactable is TowerBase:
+		money_feed_target = focused_interactable
 
 # (({[%%%(({[=======================================================================================================================]}))%%%]}))
 func _place_grabbed_entity() -> void:
-	var sold_item: bool = false
+	var shop_item_display_focused: bool
 	if is_instance_valid(focused_interactable):
-		if focused_interactable is ShopItemDisplay && character.grabbed_entity is BlockPile:
-			var grabbed_block_pile: BlockPile = character.drop_grabbed_entity()
-			focused_interactable.give_coins_for_block(grabbed_block_pile.blocks[0], character)
-			grabbed_block_pile.queue_free()
-			sold_item = true
+		if focused_interactable is ShopItemDisplay:
+			shop_item_display_focused = true
+			if character.grabbed_entity is BlockPile && focused_interactable.will_buy(character.grabbed_entity):
+				var grabbed_block_pile: BlockPile = character.drop_grabbed_entity()
+				focused_interactable.give_coins_for_block(grabbed_block_pile.blocks[0], character)
+				grabbed_block_pile.queue_free()
 	
-	if !sold_item:
+	if !shop_item_display_focused:
 		if is_instance_valid(selection_interactable):
 			if selection_interactable is BlockPile && character.grabbed_entity is BlockPile:
 				var grabbed_block_pile: BlockPile = character.drop_grabbed_entity()
@@ -372,44 +437,6 @@ func _update_movement_input() -> void:
 	raw_move_input.z = raw_horizontal_move_input.y
 	
 	world_move_input = camera_rig.get_yaw_local_vector3(raw_move_input)
-
-func _update_focus() -> void:
-	var new_focused_entity: Node3D = camera_rig.get_focused_entity()
-	
-	focus_world_entity = new_focused_entity
-	focus_world_pos = camera_rig.focus_position
-
-func _update_cursor_pos() -> void:
-	cursor_pos = get_viewport().get_mouse_position()
-	
-	_bound_cursor_pos()
-	
-	var space_state: PhysicsDirectSpaceState3D = get_tree().root.get_world_3d().direct_space_state
-	var ray_origin: Vector3 = camera_rig.camera_3d.project_ray_origin(cursor_pos)
-	var ray_end: Vector3 = ray_origin + camera_rig.camera_3d.project_ray_normal(cursor_pos) * 100.0
-	var ray_query = PhysicsRayQueryParameters3D.create(ray_origin, ray_end)
-	ray_query.collision_mask = 1
-	var result = space_state.intersect_ray(ray_query)
-	
-	if result.is_empty():
-		cursor_world_entity = null
-	else:
-		cursor_world_entity = result["collider"]
-		cursor_world_pos = result["position"]
-	
-	#if !the_one_single_mouse_user:
-		#Input.mouse
-
-func _bound_cursor_pos() -> void:
-	if cursor_pos.x < 0.0:
-		cursor_pos.x = 0.0
-	else: if cursor_pos.x > splitscreen_view.size.x:
-		cursor_pos.x = splitscreen_view.size.x
-	
-	if cursor_pos.y < 0.0:
-		cursor_pos.y = 0.0
-	else: if cursor_pos.y > splitscreen_view.size.y:
-		cursor_pos.y = splitscreen_view.size.y
 
 # (({[%%%(({[=======================================================================================================================]}))%%%]}))
 func toggle_cursor_visible() -> void:
@@ -436,7 +463,13 @@ func respawn_character() -> void:
 	character = CHARACTER_SCN.instantiate()
 	
 	character.body_data = body_data
-	character.position = Util.main.spawn_point
+	
+	if local_id == 0:
+		character.position = Util.main.spawn_point
+	else:
+		character.position = Util.main.extra_spawn_points[local_id - 1]
+	
+	character.collision_layer = 34
 	character.team = 0
 	character.pickup_received.connect(_on_pickup_received)
 	character.entered_gateway.connect(_on_entered_gateway)
@@ -447,6 +480,15 @@ func respawn_character() -> void:
 
 func _on_character_killed() -> void:
 	print("You died.")
+	var source_position: Vector3 = character.global_position
+	var coins_to_spawn: Array[PickupData] = CoinSpawner.get_coins_for_amount(game_resources.coins)
+	game_resources.coins = 0
+	_update_hud()
+	for coin in coins_to_spawn:
+		var pickup: Pickup = PICKUP.instantiate()
+		pickup.pickup_data = coin
+		pickup.position = source_position
+		Util.main.level.add_pickup(pickup)
 	camera_rig.anchor_position = character.global_position + Vector3.UP
 
 func _on_pickup_received(pickup: PickupData) -> void:
@@ -458,6 +500,10 @@ func _on_pickup_received(pickup: PickupData) -> void:
 func _on_entered_gateway(gateway_data: GatewayData) -> void:
 	print("Entered gateway with destination %s" % gateway_data.destination_level_id)
 	Util.main.level.load_from_level_id(gateway_data.destination_level_id)
+
+func _on_bread_lost() -> void:
+	if !game_resources: return
+	game_resources.bread -= 1
 
 # (({[%%%(({[=======================================================================================================================]}))%%%]}))
 # GAME START
@@ -538,15 +584,11 @@ func _init_camera_rig() -> void:
 	
 	camera_rig.make_current()
 	#camera_rig.zoom = 20.0
-	camera_rig.zoom = 2.675
+	#camera_rig.zoom = 2.675
 	
-	if perspective == Perspective.FPS:
-		camera_rig.look_bounds.y = 89.0
-		camera_rig.anchor_offset.y = 0.0
-		camera_rig.spring_arm_3d.position.x = 0.0
-	else:
-		camera_rig.look_bounds.y = 60.0
-		camera_rig.spring_arm_3d.position.x = 0.5
+	camera_rig.look_bounds.y = 60.0
+	camera_rig.spring_arm_3d.position.x = 0.0
+	camera_rig.anchor_offset.y = 0.5
 	
 	for i in 4:
 		if i == local_id: continue
@@ -560,18 +602,14 @@ func set_camera_rig(_camera_rig: CameraRig) -> void:
 
 func spawn_camera_rig() -> void:
 	splitscreen_view = SPLITSCREEN_VIEW_SCN.instantiate()
-	splitscreen_view.set_multiplayer_authority(get_multiplayer_authority())
-	splitscreen_view.hide()
 	camera_view_layer.add_child(splitscreen_view)
 	
 	shader_view = SHADER_VIEW_SCN.instantiate()
-	shader_view.set_multiplayer_authority(get_multiplayer_authority())
 	shader_view_layer.add_child(shader_view)
 	
 	camera_rig = CAMERA_RIG.instantiate()
-	camera_rig.set_multiplayer_authority(get_multiplayer_authority())
-	#splitscreen_view.sub_viewport.add_child(camera_rig)
-	camera_view_layer.add_child(camera_rig)
+	splitscreen_view.sub_viewport.add_child(camera_rig)
+	#camera_view_layer.add_child(camera_rig)
 	_init_camera_rig()
 	
 	if is_instance_valid(hud): hud.queue_free()
@@ -584,6 +622,17 @@ func spawn_camera_rig() -> void:
 
 # (({[%%%(({[=======================================================================================================================]}))%%%]}))
 # INPUT
+func assign_default_controls(control_type: int, device: int = 0) -> void:
+	PlayerController.assign_default_controls_by_id(local_id, control_type, device)
+	controls_assigned = control_type
+	device_assigned = device
+
+static func assign_default_controls_by_id(player_id: int, control_type: int, device: int = 0) -> void:
+	match control_type:
+		0: _assign_default_keyboard_controls(player_id)
+		1: _assign_default_gamepad_sony_controls(player_id, device)
+		2: _assign_default_gamepad_nintendo_controls(player_id, device)
+		3: _assign_default_gamepad_xbox_controls(player_id, device)
 
 # ------------------------------------------------------------------------------------------------
 # PRIVATE INPUT
@@ -599,7 +648,22 @@ static func _assign_mouse_button_action_event(player_id: int, action: String, bu
 	InputMap.action_erase_events(action + "_" + str(player_id))
 	InputMap.action_add_event(action + "_" + str(player_id), input_event_mouse_button)
 
-static func _assign_default_keyboard_controls(_peer_id: int, player_id: int) -> void:
+static func _assign_gamepad_button_action_event(player_id: int, device: int, action: String, button: JoyButton) -> void:
+	var input_event_joypad_button: InputEventJoypadButton = InputEventJoypadButton.new()
+	input_event_joypad_button.button_index = button
+	input_event_joypad_button.device = device
+	InputMap.action_erase_events(action + "_" + str(player_id))
+	InputMap.action_add_event(action + "_" + str(player_id), input_event_joypad_button)
+
+static func _assign_gamepad_motion_action_event(player_id: int, device: int, action: String, axis: JoyAxis, value: float) -> void:
+	var input_event_joypad_motion: InputEventJoypadMotion = InputEventJoypadMotion.new()
+	input_event_joypad_motion.axis = axis
+	input_event_joypad_motion.axis_value = value
+	input_event_joypad_motion.device = device
+	InputMap.action_erase_events(action + "_" + str(player_id))
+	InputMap.action_add_event(action + "_" + str(player_id), input_event_joypad_motion)
+
+static func _assign_default_keyboard_controls(player_id: int) -> void:
 	## Move
 	_assign_key_action_event(player_id, "move_left", KEY_A)
 	_assign_key_action_event(player_id, "move_right", KEY_D)
@@ -611,9 +675,59 @@ static func _assign_default_keyboard_controls(_peer_id: int, player_id: int) -> 
 	## Action inputs
 	_assign_mouse_button_action_event(player_id, "primary", MOUSE_BUTTON_LEFT)
 	_assign_mouse_button_action_event(player_id, "secondary", MOUSE_BUTTON_RIGHT)
+	_assign_mouse_button_action_event(player_id, "zoom_in", MOUSE_BUTTON_WHEEL_UP)
+	_assign_mouse_button_action_event(player_id, "zoom_out", MOUSE_BUTTON_WHEEL_DOWN)
 	_assign_key_action_event(player_id, "sprint", KEY_SHIFT)
-	_assign_key_action_event(player_id, "item", KEY_Q)
 	_assign_key_action_event(player_id, "interact", KEY_E)
+	_assign_key_action_event(player_id, "recipes", KEY_TAB)
 	
 	## Menu inputs
 	_assign_key_action_event(player_id, "start", KEY_ESCAPE)
+
+
+static func _assign_default_gamepad_axis_controls(player_id: int, device: int) -> void:
+	_assign_gamepad_motion_action_event(player_id, device, "move_left", JOY_AXIS_LEFT_X, -1.0)
+	_assign_gamepad_motion_action_event(player_id, device, "move_right", JOY_AXIS_LEFT_X, 1.0)
+	_assign_gamepad_motion_action_event(player_id, device, "move_back", JOY_AXIS_LEFT_Y, 1.0)
+	_assign_gamepad_motion_action_event(player_id, device, "move_forward", JOY_AXIS_LEFT_Y, -1.0)
+	
+	_assign_gamepad_motion_action_event(player_id, device, "look_left", JOY_AXIS_RIGHT_X, -1.0)
+	_assign_gamepad_motion_action_event(player_id, device, "look_right", JOY_AXIS_RIGHT_X, 1.0)
+	_assign_gamepad_motion_action_event(player_id, device, "look_down", JOY_AXIS_RIGHT_Y, 1.0)
+	_assign_gamepad_motion_action_event(player_id, device, "look_up", JOY_AXIS_RIGHT_Y, -1.0)
+
+static func _assign_default_gamepad_common_controls(player_id: int, device: int) -> void:
+	_assign_default_gamepad_axis_controls(player_id, device)
+	
+	_assign_gamepad_button_action_event(player_id, device, "zoom_in", JOY_BUTTON_DPAD_UP)
+	_assign_gamepad_button_action_event(player_id, device, "zoom_out", JOY_BUTTON_DPAD_DOWN)
+	#if player_id == 0: _assign_gamepad_button_action_event(player_id, device, "start", JOY_BUTTON_START)
+
+static func _assign_default_gamepad_sony_controls(player_id: int, device: int) -> void:
+	_assign_default_gamepad_common_controls(player_id, device)
+	
+	_assign_gamepad_button_action_event(player_id, device, "primary", JOY_BUTTON_A) # CROSS
+	_assign_gamepad_button_action_event(player_id, device, "secondary", JOY_BUTTON_B) # CIRCLE
+	_assign_gamepad_button_action_event(player_id, device, "sprint", JOY_BUTTON_RIGHT_SHOULDER)
+	_assign_gamepad_button_action_event(player_id, device, "interact", JOY_BUTTON_X) # SQUARE
+	_assign_gamepad_button_action_event(player_id, device, "recipes", JOY_BUTTON_LEFT_SHOULDER)
+	
+	#_assign_gamepad_button_action_event(player_id, device, "primary", JOY_BUTTON_Y) # TRIANGLE
+
+static func _assign_default_gamepad_nintendo_controls(player_id: int, device: int) -> void:
+	_assign_default_gamepad_common_controls(player_id, device)
+	
+	_assign_gamepad_button_action_event(player_id, device, "primary", JOY_BUTTON_X) # A
+	_assign_gamepad_button_action_event(player_id, device, "secondary", JOY_BUTTON_A) # B
+	_assign_gamepad_button_action_event(player_id, device, "sprint", JOY_BUTTON_RIGHT_SHOULDER)
+	_assign_gamepad_button_action_event(player_id, device, "interact", JOY_BUTTON_Y) # X
+	_assign_gamepad_button_action_event(player_id, device, "recipes", JOY_BUTTON_LEFT_SHOULDER)
+
+static func _assign_default_gamepad_xbox_controls(player_id: int, device: int) -> void:
+	_assign_default_gamepad_common_controls(player_id, device)
+	
+	_assign_gamepad_button_action_event(player_id, device, "primary", JOY_BUTTON_A) # CROSS
+	_assign_gamepad_button_action_event(player_id, device, "secondary", JOY_BUTTON_B) # CIRCLE
+	_assign_gamepad_button_action_event(player_id, device, "sprint", JOY_BUTTON_RIGHT_SHOULDER)
+	_assign_gamepad_button_action_event(player_id, device, "interact", JOY_BUTTON_X) # SQUARE
+	_assign_gamepad_button_action_event(player_id, device, "recipes", JOY_BUTTON_LEFT_SHOULDER)

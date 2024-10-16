@@ -16,3 +16,11 @@ class_name BuildingTileSetData extends Resource
 @export var roof_end: int = -1
 @export var roof_end_inverse: int = -1
 @export var roof_center: int = -1
+
+@export var ceiling_corner: int = -1
+@export var ceiling_border: int = -1
+@export var ceiling: int = -1
+@export var ceiling_low_border: int = -1
+@export var ceiling_low: int = -1
+
+@export var corner_terrain_tile: int = -1

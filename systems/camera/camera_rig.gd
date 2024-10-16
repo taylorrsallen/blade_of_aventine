@@ -21,10 +21,10 @@ enum ControlMode {
 @export var anchor_node: Node3D: set = _set_anchor_node
 var anchor_position: Vector3
 @export var anchor_offset: Vector3
-@export var zoom: float = 0.0
+@export var zoom: float = 2.675
 
 @export var mouse_look_sensitivity: float = 1.0
-@export var gamepad_look_sensitivity: float = 1.0
+@export var gamepad_look_sensitivity: float = 3.5
 @export var look_bounding: bool = true
 @export var look_bounds: Vector2 = Vector2(-89.0, 89.0)
 
@@ -35,7 +35,7 @@ var euler_rot: Vector3
 var perspective: PlayerController.Perspective
 var control_mode: ControlMode: set = _set_control_mode
 
-@export var base_fov: float = 90.0
+@export var base_fov: float = 70.0
 @export var fov_mod: float
 
 # ////////////////////////////////////////////////////////////////////////////////////////////////
@@ -47,12 +47,6 @@ func _set_control_mode(_control_mode: ControlMode) -> void:
 		look_bounding = true
 
 # ////////////////////////////////////////////////////////////////////////////////////////////////
-func _ready() -> void:
-	Util.local_viewers.append(self)
-
-func _exit_tree() -> void:
-	Util.local_viewers.erase(self)
-
 func _physics_process(delta: float) -> void:
 	if perspective == PlayerController.Perspective.FPS:
 		update_first_person_position(delta)

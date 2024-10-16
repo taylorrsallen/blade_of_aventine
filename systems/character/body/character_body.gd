@@ -7,9 +7,10 @@ signal damaged(damage_data: DamageData, area_id: int)
 @onready var animation_tree: AnimationTree = $AnimationTree
 var animation_data: CharacterBodyAnimationData: set = _set_animation_data
 var animation_players: Array[CharacterAnimationTypePlayer]
+var data: CharacterBodyData
 
-@onready var right_hand: BoneAttachment3D = $Model/root/Skeleton3D/RightHand
-@onready var left_hand: BoneAttachment3D = $Model/root/Skeleton3D/LeftHand
+@onready var right_hand: BoneAttachment3D
+@onready var left_hand: BoneAttachment3D
 
 var left_footstep: bool
 
@@ -29,19 +30,28 @@ func _set_animation_data(_animation_data: CharacterBodyAnimationData) -> void:
 	animation_players[0].target = 1.0
 
 # (({[%%%(({[=======================================================================================================================]}))%%%]}))
+func _ready() -> void:
+	right_hand = $Model/root/Skeleton3D/RightHand
+	left_hand = $Model/root/Skeleton3D/LeftHand
+
 func _physics_process(delta: float) -> void:
 	_update(delta)
 
 func _update(delta: float) -> void:
 	if !animation_data: return
 	for animation_player in animation_players:
-		animation_player.update_blend(delta, animation_tree)
-		animation_player.advance_step(delta, animation_tree)
+		if animation_player.data.type == CharacterAnimationTypeData.CharacterAnimationType.WALK:
+			var sprint_speed_multiplier: float = 1.0 + 0.5 * animation_players[CharacterAnimationTypeData.CharacterAnimationType.SPRINT].blend
+			animation_player.update_blend(delta, animation_tree)
+			animation_player.advance_step(delta * sprint_speed_multiplier, animation_tree)
+		else:
+			animation_player.update_blend(delta, animation_tree)
+			animation_player.advance_step(delta, animation_tree)
 	
 	if is_instance_valid(eating_node):
-		eating_node.global_position = right_hand.global_position + Vector3(0.087, 0.087, -0.101)
+		eating_node.global_position = right_hand.global_position + right_hand.global_basis.z * data.grabbable_bread_offset
 		eating_node.global_rotation = right_hand.global_rotation
-		eating_node.rotation_degrees += Vector3(72.3, -45.5, -27.5)
+		eating_node.rotation_degrees += data.grabbable_bread_rotation
 	
 	if grounded && animation_data.footsteps && animation_players[CharacterAnimationTypeData.CharacterAnimationType.WALK].blend > 0.1:
 		var current_walk_step: int = animation_players[CharacterAnimationTypeData.CharacterAnimationType.WALK].current_step
@@ -56,7 +66,7 @@ func _play_footstep_sfx() -> void:
 	var terrain_tile: TerrainTileData = Util.main.level.get_terrain_tile_at_global_coord(global_position)
 	if terrain_tile.footstep_sounds:
 		var sound: SoundReferenceData = terrain_tile.footstep_sounds.pool.pick_random()
-		SoundManager.play_pitched_3d_sfx(sound.id, sound.type, global_position, 0.9, 1.1, -12.0, 5.0)
+		SoundManager.play_pitched_3d_sfx(sound.id, sound.type, global_position, 0.9, 1.1, -12.0 + sound.volume_db, 5.0)
 
 # (({[%%%(({[=======================================================================================================================]}))%%%]}))
 ## Bool
@@ -67,21 +77,31 @@ func attack() -> void:
 	if !animation_data: return
 	animation_players[CharacterAnimationTypeData.CharacterAnimationType.ATTACK].target = 1.0
 	animation_players[CharacterAnimationTypeData.CharacterAnimationType.ATTACK].current_step = 0.0
+
 func special() -> void:
 	if !animation_data: return
 	animation_players[CharacterAnimationTypeData.CharacterAnimationType.SPECIAL].target = 1.0
 	animation_players[CharacterAnimationTypeData.CharacterAnimationType.SPECIAL].current_step = 0.0
+
 func stagger() -> void:
 	if !animation_data: return
 	animation_players[CharacterAnimationTypeData.CharacterAnimationType.STAGGER].target = 1.0
 	animation_players[CharacterAnimationTypeData.CharacterAnimationType.STAGGER].current_step = 0.0
+
 func die() -> void:
 	if !animation_data: return
 	animation_players[CharacterAnimationTypeData.CharacterAnimationType.DIE].target = 1.0
 	animation_players[CharacterAnimationTypeData.CharacterAnimationType.DIE].current_step = 0.0
 	
 	reparent(Util.main)
-	await get_tree().create_timer(5.0).timeout
+	
+	var target_height: float = Util.main.level.get_placement_height_at_global_coord(global_position)
+	var move_step: float = global_position.y / 10.0
+	for i in 10:
+		global_position.y = move_toward(global_position.y, target_height, move_step)
+		await get_tree().create_timer(0.05).timeout
+		
+	await get_tree().create_timer(4.0).timeout
 	for i in 20:
 		global_position.y -= 0.05
 		await get_tree().create_timer(0.1).timeout
@@ -97,12 +117,15 @@ func set_eating(_node: Node3D) -> void:
 func set_walking(_active: bool) -> void:
 	if !animation_data: return
 	animation_players[CharacterAnimationTypeData.CharacterAnimationType.WALK].target = 1.0 if _active else 0.0
+
 func set_sprinting(_active: bool) -> void:
 	if !animation_data: return
 	animation_players[CharacterAnimationTypeData.CharacterAnimationType.SPRINT].target = 1.0 if _active else 0.0
+
 func set_grabbing(_active: bool) -> void:
 	if !animation_data: return
 	animation_players[CharacterAnimationTypeData.CharacterAnimationType.GRAB].target = 1.0 if _active else 0.0
+
 func set_dancing(_active: bool) -> void:
 	if !animation_data: return
 	animation_players[CharacterAnimationTypeData.CharacterAnimationType.DANCE].target = 1.0 if _active else 0.0

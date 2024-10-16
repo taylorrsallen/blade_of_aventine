@@ -7,6 +7,7 @@ signal killed()
 signal pickup_received(pickup: PickupData)
 signal finished_eating()
 signal entered_gateway(gateway_data: GatewayData)
+signal body_data_changed()
 
 # (({[%%%(({[=======================================================================================================================]}))%%%]}))
 enum CharacterFlag {
@@ -28,6 +29,7 @@ enum CharacterAction {
 # (({[%%%(({[=======================================================================================================================]}))%%%]}))
 const RANDOM_NOISES: PackedScene = preload("res://systems/character/noises/random_noises.scn")
 const PICKUP: PackedScene = preload("res://systems/level/entities/pickup/pickup.scn")
+const EMPEROR: CharacterBodyData = preload("res://resources/bodies/emperor.res")
 
 # (({[%%%(({[=======================================================================================================================]}))%%%]}))
 ## COMPOSITION
@@ -93,6 +95,8 @@ var grabbed_entity: Interactable
 
 ## AI INTERACTION
 @export var team: int
+var previous_position: Vector3
+var effective_velocity: Vector3
 
 ## AUDIO
 var random_noises: RandomNoises
@@ -101,6 +105,10 @@ var random_noises: RandomNoises
 var eating: bool
 var eating_timer: float
 var eating_sound_timer: float
+
+var readied: bool
+
+var unstuck_speed_mod: float
 
 # (({[%%%(({[=======================================================================================================================]}))%%%]}))
 func is_flag_on(flag: CharacterFlag) -> bool: return Util.is_flag_on(flags, flag)
@@ -116,7 +124,7 @@ func set_flag(flag: CharacterFlag, active: bool) -> void: flags = Util.set_flag(
 
 func _set_character_body_data(_body_data: CharacterBodyData) -> void:
 	body_data = _body_data
-	if get_children().is_empty(): return
+	if !readied: return
 	
 	body_center_pivot = $BodyContainer/BodyCenterPivot
 	for child in body_center_pivot.get_children(): child.free()
@@ -141,9 +149,22 @@ func _set_character_body_data(_body_data: CharacterBodyData) -> void:
 	
 	drops_data = body_data.drops_data
 	body.animation_data = body_data.character_body_animation_data
+	body.data = body_data
 	
-	health = body_data.max_health
+	if body_data != EMPEROR:
+		health = body_data.max_health + body_data.max_health * Util.main.level.waves_passed * 0.05
+		print("Spawned with %s health" % health)
+	else:
+		health = body_data.max_health
 	
+	$NavCollider.shape.radius = body_data.radius
+	$DamageableArea3D/CollisionShape3D.shape.radius = body_data.radius
+	
+	mass = body_data.mass
+	
+	if body_data.body_type == CharacterBodyData.BodyType.FLYING:
+		ride_height = 4.0
+		$NavCollider/SpringRay.target_position.y = -6.0
 
 func get_eye_target() -> Node3D:
 	return body.get_eye_target()
@@ -153,6 +174,9 @@ func get_body_center_pos() -> Vector3:
 
 # (({[%%%(({[=======================================================================================================================]}))%%%]}))
 func _ready() -> void:
+	$NavCollider.shape = $NavCollider.shape.duplicate()
+	$DamageableArea3D/CollisionShape3D.shape = $DamageableArea3D/CollisionShape3D.shape.duplicate()
+	readied = true
 	_set_character_body_data(body_data)
 	default_collision_mask = collision_mask
 	
@@ -160,6 +184,8 @@ func _ready() -> void:
 
 func _physics_process(delta: float) -> void:
 	attack_timer = min(attack_timer + delta, body_data.attack_rate)
+	effective_velocity = global_position - previous_position
+	previous_position = global_position
 	
 	if grabbed_entity:
 		if !is_instance_valid(grabbed_entity): drop_grabbed_entity()
@@ -217,12 +243,16 @@ func _update_grabbed_entity() -> void:
 		grabbed_entity.current_animation_position = grabbed_entity.global_position
 
 # (({[%%%(({[=======================================================================================================================]}))%%%]}))
-func set_sprinting(active: bool) -> void: set_flag(CharacterFlag.SPRINT, active)
+func set_sprinting(active: bool) -> void:
+	set_flag(CharacterFlag.SPRINT, active)
+	body.set_sprinting(active)
 
 func toggle_sprinting() -> void:
 	if is_flag_on(CharacterFlag.SPRINT):
+		body.set_sprinting(false)
 		set_flag_off(CharacterFlag.SPRINT)
 	else:
+		body.set_sprinting(true)
 		set_flag_on(CharacterFlag.SPRINT)
 
 # (({[%%%(({[=======================================================================================================================]}))%%%]}))
@@ -347,11 +377,15 @@ func _update_ride_force() -> void:
 func _on_killed() -> void:
 	if drops_data: drops_data.drop(global_position)
 	
-	if grabbed_entity: drop_grabbed_entity()
+	if is_instance_valid(grabbed_entity):
+		var drop_entity: Interactable = drop_grabbed_entity()
+		Util.main.level.place_interactable_at_global_coord(drop_entity.global_position, drop_entity)
 	
 	if body_data.die_sounds:
 		var sound: SoundReferenceData = body_data.die_sounds.pool.pick_random()
 		SoundManager.play_pitched_3d_sfx(sound.id, sound.type, global_position, 0.9, 1.1, sound.volume_db, 5.0)
+	
+	
 	
 	body.die()
 	
@@ -359,14 +393,22 @@ func _on_killed() -> void:
 	queue_free()
 
 func _on_damageable_area_3d_damaged(damage_data: DamageData, _area_id: int, source: Node) -> void:
+	damage(damage_data, source)
+
+func damage(damage_data: DamageData, source: Node) -> void:
 	if is_flag_on(CharacterFlag.DEAD): return
 	
+	body.stagger()
 	if body_data.hit_sounds:
 		var sound: SoundReferenceData = body_data.hit_sounds.pool.pick_random()
 		SoundManager.play_pitched_3d_sfx(sound.id, sound.type, global_position, 0.9, 1.1, sound.volume_db, 5.0)
 	
-	health -= damage_data.damage_strength
-	if health < 0.0:
+	if damage_data.damage_type == DamageData.DamageType.ELEMENTAL:
+		health -= damage_data.damage_strength
+	else:
+		health -= clampf(damage_data.damage_strength - body_data.flat_armor, 0.0, 999.9)
+	
+	if health <= 0.0:
 		set_flag_on(CharacterFlag.DEAD)
 		if is_instance_valid(source) && source.has_method("add_experience"):
 			source.add_experience(body_data.get_experience_value())
@@ -392,14 +434,15 @@ func _update_eating(delta: float) -> void:
 	eating_timer += delta
 	if eating_timer >= body_data.time_to_eat:
 		eating_timer -= body_data.time_to_eat
-		Util.player.game_resources.bread -= 1
-		grabbed_entity.queue_free()
+		EventBus.bread_lost.emit()
+		if is_instance_valid(grabbed_entity): grabbed_entity.queue_free()
 		body.set_eating(null)
 		finished_eating.emit()
 		eating = false
 
 # (({[%%%(({[=======================================================================================================================]}))%%%]}))
 func get_velocity() -> Vector3:
+	if effective_velocity.length() < 0.01: return Vector3.ZERO
 	return linear_velocity
 
 # (({[%%%(({[=======================================================================================================================]}))%%%]}))

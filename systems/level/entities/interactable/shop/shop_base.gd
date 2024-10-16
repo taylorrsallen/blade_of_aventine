@@ -4,7 +4,6 @@ class_name ShopBase extends Interactable
 const SHOP_ITEM_DISPLAY: PackedScene = preload("res://systems/level/entities/interactable/shop/shop_item_display.scn")
 const BLOCK_PILE: PackedScene = preload("res://systems/level/entities/interactable/block_pile/block_pile.scn")
 const PICKUP: PackedScene = preload("res://systems/level/entities/pickup/pickup.scn")
-const COIN: PickupData = preload("res://resources/pickups/coin.res")
 
 # (({[%%%(({[=======================================================================================================================]}))%%%]}))
 @onready var dialogue_world_reader: DialogueWorldReader = $DialogueWorldReader
@@ -60,45 +59,51 @@ func _refresh_display() -> void:
 
 # (({[%%%(({[=======================================================================================================================]}))%%%]}))
 func _on_item_display_interacted(item_display: ShopItemDisplay, source: Character, controller: PlayerController) -> void:
-	if !is_instance_valid(source.grabbed_entity):
-		var cost: int = item_display.block_data.value * data.buy_rate
-		if controller.game_resources.coins >= cost:
-			controller.game_resources.coins -= cost
-			var block_pile: BlockPile = BLOCK_PILE.instantiate()
-			Util.main.level.add_tile_entity(block_pile)
-			block_pile.add_block(item_display.block_data)
-			source.grab_entity(block_pile)
-			while cost > 0:
-				var coin_value: int = 10
-				if cost < 10: coin_value = cost
-				cost -= coin_value
-				var pickup: Pickup = PICKUP.instantiate()
-				pickup.position = source.global_position
-				Util.main.level.add_pickup(pickup)
-				pickup.pickup_data = COIN.duplicate()
-				pickup.take(self)
-				await get_tree().create_timer(0.1).timeout
+	if is_instance_valid(source.grabbed_entity): return
+	var cost: int = item_display.block_data.value * data.buy_rate
+	if controller.game_resources.coins >= cost:
+		controller.game_resources.coins -= cost
+		var block_pile: BlockPile = BLOCK_PILE.instantiate()
+		Util.main.level.add_tile_entity(block_pile)
+		block_pile.add_block(item_display.block_data)
+		source.grab_entity(block_pile)
+		
+		var coins_to_get: Array[PickupData] = CoinSpawner.get_coins_for_amount(cost)
+		var source_position: Vector3 = source.global_position
+		for coin in coins_to_get:
+			var pickup: Pickup = PICKUP.instantiate()
+			pickup.position = source_position
+			Util.main.level.add_pickup(pickup)
+			pickup.pickup_data = coin
+			pickup.take(self)
+			await get_tree().create_timer(0.1).timeout
 
 func _on_item_display_highlighted(item_display: ShopItemDisplay, source: Character, _controller: PlayerController) -> void:
 	if is_instance_valid(source.grabbed_entity):
 		if source.grabbed_entity is BlockPile:
-			dialogue_world_reader.reader.print_string("%s as, I will pay" % [source.grabbed_entity.blocks[0].value * data.sell_rate])
+			var will_buy: bool
+			for item in data.items_that_shop_will_buy:
+				if source.grabbed_entity.blocks[0] == item:
+					will_buy = true
+					break
+			
+			if will_buy:
+				dialogue_world_reader.reader.print_string("%s as, I will pay" % [roundf(source.grabbed_entity.blocks[0].value * data.sell_rate)])
+			else:
+				dialogue_world_reader.reader.print_string("I don't want that!")
 	else:
-		dialogue_world_reader.reader.print_string("%s as, you will pay" % [item_display.block_data.value * data.buy_rate])
+		dialogue_world_reader.reader.print_string("%s as, you will pay" % [roundf(item_display.block_data.value * data.buy_rate)])
 
 func _on_item_display_unhighlighted(_item_display: ShopItemDisplay, _source: Character, _controller: PlayerController) -> void:
 	dialogue_world_reader.reader.clear()
 
 func _on_buy_block_from_character(block_data: BlockData, character: Character) -> void:
 	var amount_owed: int = block_data.value * data.sell_rate
-	while amount_owed > 0:
-		var coin_value: int = 10
-		if amount_owed < 10: coin_value = amount_owed
-		amount_owed -= coin_value
+	var coins_to_give: Array[PickupData] = CoinSpawner.get_coins_for_amount(amount_owed)
+	for coin in coins_to_give:
 		var pickup: Pickup = PICKUP.instantiate()
 		pickup.position = global_position
 		Util.main.level.add_pickup(pickup)
-		pickup.pickup_data = COIN.duplicate()
-		pickup.pickup_data.metadata["coins"] = coin_value
-		pickup.take(character)
+		pickup.pickup_data = coin
+		if is_instance_valid(character): pickup.take(character)
 		await get_tree().create_timer(0.1).timeout

@@ -42,7 +42,55 @@ const ICONS_DIR: String = ASSET_DIR + ICONS_FOLDER
 # ////////////////////////////////////////////////////////////////////////////////////////////////
 static var main: Main
 static var player: PlayerController
-static var local_viewers: Array[Node3D]
+static var extra_players: Array[PlayerController] = [null, null, null]
+
+# ////////////////////////////////////////////////////////////////////////////////////////////////
+static func get_player_controller(player_id: int) -> PlayerController:
+	if player_id == 0:
+		return Util.player
+	else:
+		return Util.extra_players[player_id - 1]
+
+static func get_player_character(player_id: int) -> Character:
+	var player_controller: PlayerController = get_player_controller(player_id)
+	if !is_instance_valid(player_controller): return null
+	return player_controller.character
+
+static func get_closest_player_character(global_coord: Vector3) -> Character:
+	var player_characters: Array[Character] = []
+	for i in 4:
+		var player_character: Character = get_player_character(i)
+		if is_instance_valid(player_character): player_characters.append(player_character)
+	
+	if player_characters.is_empty(): return null
+	
+	var closest_character: Character = null
+	var closest_distance: float = 100.0
+	for player_character in player_characters:
+		var distance: float = player_character.global_position.distance_to(global_coord)
+		if distance < closest_distance:
+			closest_character = player_character
+			closest_distance = distance
+	
+	return closest_character
+
+static func get_closest_player_controller(global_coord: Vector3) -> PlayerController:
+	var player_controllers: Array[PlayerController] = []
+	for i in 4:
+		var player_controller: PlayerController = get_player_controller(i)
+		if is_instance_valid(player_controller) && is_instance_valid(player_controller.character): player_controllers.append(player_controller)
+	
+	if player_controllers.is_empty(): return null
+	
+	var closest_controller: PlayerController = null
+	var closest_distance: float = 100.0
+	for player_controller in player_controllers:
+		var distance: float = player_controller.character.global_position.distance_to(global_coord)
+		if distance < closest_distance:
+			closest_controller = player_controller
+			closest_distance = distance
+	
+	return closest_controller
 
 # ////////////////////////////////////////////////////////////////////////////////////////////////
 static func set_flag(mask: int, flag: int, active: bool) -> int:

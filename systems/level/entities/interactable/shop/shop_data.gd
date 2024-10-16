@@ -2,6 +2,7 @@ class_name ShopData extends Resource
 
 # (({[%%%(({[=======================================================================================================================]}))%%%]}))
 @export var items_for_sale: Array[BlockData]
+@export var items_that_shop_will_buy: Array[BlockData]
 ## How much I pay YOU for YOUR goods
 @export var sell_rate: float = 0.7
 ## How much YOU pay ME for MY goods

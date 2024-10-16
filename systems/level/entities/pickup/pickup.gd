@@ -33,6 +33,9 @@ func _set_pickup_data(_pickup_data: PickupData) -> void:
 func _ready() -> void:
 	direction = Vector3(randf() - 0.5, 0.0, randf() - 0.5).normalized()
 	rotation_speed = Vector3((randf() - 0.5) * 40.0, (randf() - 0.5) * 40.0, (randf() - 0.5) * 40.0)
+	if pickup_data && pickup_data.spawn_sounds:
+		var sound: SoundReferenceData = pickup_data.spawn_sounds.pool.pick_random()
+		SoundManager.play_pitched_3d_sfx(sound.id, sound.type, global_position, 0.9, 1.1, sound.volume_db)
 
 func _physics_process(delta: float) -> void:
 	lifetime_timer += delta
@@ -51,7 +54,7 @@ func _physics_process(delta: float) -> void:
 			$Body/Model.visible = !$Body/Model.visible
 	
 	if lifetime_timer >= despawn_cd:
-		if pickup_data.metadata.has("bread"): Util.player.game_resources.bread -= pickup_data.metadata["bread"]
+		if pickup_data.metadata.has("bread"): EventBus.bread_lost.emit()
 		queue_free()
 	
 	time_until_suction_timer += delta
@@ -74,6 +77,8 @@ func _physics_process(delta: float) -> void:
 		$Body.rotate_x(delta * rotation_speed.x)
 		$Body.rotate_y(delta * rotation_speed.y)
 		$Body.rotate_z(delta * rotation_speed.z)
+	
+	if !is_instance_valid(suction_target): body.collision_layer = 8
 
 # (({[%%%(({[=======================================================================================================================]}))%%%]}))
 func take(taker: Node3D) -> void:

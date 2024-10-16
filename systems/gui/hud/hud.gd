@@ -1,15 +1,17 @@
 class_name HUDGui extends Control
 
 # (({[%%%(({[=======================================================================================================================]}))%%%]}))
-@onready var active_wave_contents_icon: WaveContentsIcon = $PanelContainer/PanelContainer/MarginContainer/HBoxContainer/MarginContainer/HBoxContainer/ActiveWaveContentsIcon
-@onready var wave_progress_bar: ProgressBar = $PanelContainer/PanelContainer/MarginContainer/HBoxContainer/MarginContainer/HBoxContainer/WaveProgressBar
+@onready var active_wave_contents_icon: WaveContentsIcon = $MarginContainer/HBoxContainer3/HBoxContainer2/ActiveWaveContentsIcon
+@onready var next_wave_contents_icon: WaveContentsIcon = $MarginContainer/HBoxContainer3/HBoxContainer2/NextWaveContentsIcon
 @onready var incoming_wave_contents_icon: WaveContentsIcon = $IncomingWaveContentsIcon
-@onready var next_wave_contents_icon: WaveContentsIcon = $PanelContainer/PanelContainer/MarginContainer/HBoxContainer/MarginContainer/HBoxContainer/NextWaveContentsIcon
+@onready var wave_progress_bar: ProgressBar = $MarginContainer/HBoxContainer3/HBoxContainer2/WaveProgressBar
 
-@onready var coins_icon: TextureRect = $PanelContainer/PanelContainer/MarginContainer/HBoxContainer/HBoxContainer/HBoxContainer/CoinsIcon
-@onready var coins_label: Label = $PanelContainer/PanelContainer/MarginContainer/HBoxContainer/HBoxContainer/HBoxContainer/CoinsLabel
-@onready var bread_icon: TextureRect = $PanelContainer/PanelContainer/MarginContainer/HBoxContainer/HBoxContainer/HBoxContainer2/BreadIcon
-@onready var bread_label: Label = $PanelContainer/PanelContainer/MarginContainer/HBoxContainer/HBoxContainer/HBoxContainer2/BreadLabel
+@onready var coins_icon: TextureRect = $MarginContainer/HBoxContainer3/HBoxContainer/HBoxContainer/CoinsIcon
+@onready var coins_label: Label = $MarginContainer/HBoxContainer3/HBoxContainer/HBoxContainer/CoinsLabel
+@onready var bread_icon: TextureRect = $MarginContainer/HBoxContainer3/HBoxContainer/HBoxContainer2/BreadIcon
+@onready var bread_label: Label = $MarginContainer/HBoxContainer3/HBoxContainer/HBoxContainer2/BreadLabel
+
+@onready var recipes: MarginContainer = $Recipes
 
 # (({[%%%(({[=======================================================================================================================]}))%%%]}))
 func _ready() -> void:
@@ -19,7 +21,7 @@ func _ready() -> void:
 # (({[%%%(({[=======================================================================================================================]}))%%%]}))
 func set_wave_progress(progress: float) -> void:
 	wave_progress_bar.value = progress
-	incoming_wave_contents_icon.global_position.x = wave_progress_bar.global_position.x + wave_progress_bar.size.x * (1.0 - progress) - incoming_wave_contents_icon.size.x * 0.5
+	incoming_wave_contents_icon.global_position.x = (wave_progress_bar.global_position.x + wave_progress_bar.size.x * (1.0 - progress) - incoming_wave_contents_icon.size.x * 0.5)
 	incoming_wave_contents_icon.global_position.y = wave_progress_bar.global_position.y + wave_progress_bar.size.y * 0.5 - incoming_wave_contents_icon.size.y * 0.5
 	incoming_wave_contents_icon.show()
 
