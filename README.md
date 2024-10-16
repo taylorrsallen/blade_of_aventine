@@ -131,17 +131,15 @@ Orcus brings Commodus back to life and tasks him with defending the Roman cultur
 
 ## TODO
 ### !!!!! IMPORTANT START !!!!!
-PEASANT HOUSES
+PEASANT HOUSES (ONLY TEXTURES LEFT)
 SENATORAE (ONLY TEXTURES LEFT)
+SHOP MODELS (ONLY TEXTURES LEFT)
 TOWER MODELS
 EMPEROR NEEDS A CROWN
-GATEWAY MODELS
-SHOP MODELS
 WAVE PREDICTOR OBJECT
 VOLUME SETTINGS MENU
 
 FINISH BUILDING ASSEMBLER CEILING
-Towers level too fast
 Only one player should be able to dance on a tower at a time
 Tower level up sound
 Tower max level banners
@@ -151,7 +149,11 @@ Tower placing sfx
 ^ THAT IS ALL THAT MATTERS ^
 
 ### DONE START
+GATEWAY MODELS (I JUST USED THE BUILDINGS INSTEAD)
 BODY DATA TOGGLE FOR SEARCH FOR TARGETS TO HIT
+Towers level too fast (now they are just right)
+Coins dropped by flying units drop correctly
+You can now hit flying units when they land to eat
 ### DONE END
 
 NEED Orcus model

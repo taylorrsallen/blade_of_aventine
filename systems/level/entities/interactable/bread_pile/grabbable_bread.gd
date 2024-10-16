@@ -1,8 +1,8 @@
 class_name GrabbableBread extends Interactable
 
 # (({[%%%(({[=======================================================================================================================]}))%%%]}))
-const PICKUP: PackedScene = preload("res://systems/level/entities/pickup/pickup.scn")
 const BREAD: PickupData = preload("res://resources/pickups/bread.res")
+var PICKUP: PackedScene = load("res://systems/level/entities/pickup/pickup.scn")
 
 # (({[%%%(({[=======================================================================================================================]}))%%%]}))
 func drop(source: Node3D) -> void:

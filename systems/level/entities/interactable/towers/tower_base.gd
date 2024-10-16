@@ -3,7 +3,7 @@ class_name TowerBase extends Interactable
 # (({[%%%(({[=======================================================================================================================]}))%%%]}))
 const BLOCK_PILE: PackedScene = preload("res://systems/level/entities/interactable/block_pile/block_pile.scn")
 const FACE_TARGET: PackedScene = preload("res://systems/common/face_target/face_target.scn")
-const PICKUP: PackedScene = preload("res://systems/level/entities/pickup/pickup.scn")
+var PICKUP: PackedScene = load("res://systems/level/entities/pickup/pickup.scn")
 
 const LEVEL_FLAG_COLORS: Array[Color] = [
 	Color8(255, 255, 255),
@@ -63,6 +63,8 @@ var targeting_preference: TowerTypeData.TargetingPreference
 
 var money_fed: int
 
+@onready var build_smoke: Node3D = $BuildSmoke
+
 func _set_type_data(_type_data: TowerTypeData) -> void:
 	type_data = _type_data
 	
@@ -117,6 +119,7 @@ func _ready() -> void:
 	readied = true
 	type_data = type_data
 	
+	build_smoke.global_position = global_position
 	start_position = global_position
 	
 	global_position.y = -(foundation.height + yaw_pivot_model.height)
@@ -217,6 +220,12 @@ func try_build_tower(delta: float) -> bool:
 	if !built:
 		build_timer += delta
 		if build_timer >= type_data.build_time:
+			build_smoke.queue_free()
+			const LARGER_SMOKE_PUFF = preload("res://scenes/vfx/larger_smoke_puff.scn")
+			var finished_puff: LifetimeVFX = LARGER_SMOKE_PUFF.instantiate()
+			finished_puff.position = global_position - Vector3.UP * 0.5
+			Util.main.add_child(finished_puff)
+			
 			position = start_position
 			current_animation_position = start_position
 			if type_data.seek_targets: firing_timer = firing_cd
@@ -493,9 +502,9 @@ func _get_closest_target_from_array(search_array: Array[Character]) -> Character
 
 # (({[%%%(({[=======================================================================================================================]}))%%%]}))
 func _get_aim_point() -> Vector3:
-	if !target.has_method("get_velocity") || !type_data.projectile_data.perfect_accuracy: return target.global_position + Vector3.UP * 0.5
+	if !target.has_method("get_velocity") || !type_data.projectile_data.perfect_accuracy: return target.global_position + Vector3.UP * target.body_data.height * 0.5
 	
-	var pti: Vector3 = target.global_position + Vector3.UP * 0.5
+	var pti: Vector3 = target.global_position + Vector3.UP * target.body_data.height * 0.5
 	var pbi: Vector3 = pitch_pivot_model.projectile_emitter.global_position
 	var d: float = pti.distance_to(pbi)
 	var vt: Vector3 = target.get_velocity()

@@ -13,7 +13,7 @@ config_version=5
 config/name="Blade of Aventine"
 run/main_scene="res://systems/managers/main.scn"
 config/features=PackedStringArray("4.3", "GL Compatibility")
-boot_splash/image="res://level_path_cost.png"
+boot_splash/image="res://assets/sprites/load_splash.png"
 config/icon="res://assets/sprites/icons/peasant_icon.png"
 
 [autoload]
@@ -307,6 +307,7 @@ recipes_3={
 3d_physics/layer_5="CHARACTERS_WITH_BREAD"
 3d_physics/layer_6="FLYING_CHARACTERS"
 3d_physics/layer_10="INTERACTABLES"
+3d_physics/layer_12="FLYING_TERRAIN_HACK"
 
 [rendering]
 

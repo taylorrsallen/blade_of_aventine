@@ -1,7 +1,7 @@
 class_name DropsData extends Resource
 
 # (({[%%%(({[=======================================================================================================================]}))%%%]}))
-const PICKUP: PackedScene = preload("res://systems/level/entities/pickup/pickup.scn")
+var PICKUP: PackedScene = load("res://systems/level/entities/pickup/pickup.scn")
 
 # (({[%%%(({[=======================================================================================================================]}))%%%]}))
 @export var drops: Array[DropData] = []

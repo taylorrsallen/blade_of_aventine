@@ -3,7 +3,7 @@ class_name ShopBase extends Interactable
 # (({[%%%(({[=======================================================================================================================]}))%%%]}))
 const SHOP_ITEM_DISPLAY: PackedScene = preload("res://systems/level/entities/interactable/shop/shop_item_display.scn")
 const BLOCK_PILE: PackedScene = preload("res://systems/level/entities/interactable/block_pile/block_pile.scn")
-const PICKUP: PackedScene = preload("res://systems/level/entities/pickup/pickup.scn")
+var PICKUP: PackedScene = load("res://systems/level/entities/pickup/pickup.scn")
 
 # (({[%%%(({[=======================================================================================================================]}))%%%]}))
 @onready var dialogue_world_reader: DialogueWorldReader = $DialogueWorldReader
@@ -62,6 +62,8 @@ func _on_item_display_interacted(item_display: ShopItemDisplay, source: Characte
 	if is_instance_valid(source.grabbed_entity): return
 	var cost: int = item_display.block_data.value * data.buy_rate
 	if controller.game_resources.coins >= cost:
+		model.talk()
+		
 		controller.game_resources.coins -= cost
 		var block_pile: BlockPile = BLOCK_PILE.instantiate()
 		Util.main.level.add_tile_entity(block_pile)

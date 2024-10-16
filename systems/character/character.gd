@@ -28,8 +28,8 @@ enum CharacterAction {
 
 # (({[%%%(({[=======================================================================================================================]}))%%%]}))
 const RANDOM_NOISES: PackedScene = preload("res://systems/character/noises/random_noises.scn")
-const PICKUP: PackedScene = preload("res://systems/level/entities/pickup/pickup.scn")
 const EMPEROR: CharacterBodyData = preload("res://resources/bodies/emperor.res")
+var PICKUP: PackedScene = load("res://systems/level/entities/pickup/pickup.scn")
 
 # (({[%%%(({[=======================================================================================================================]}))%%%]}))
 ## COMPOSITION
@@ -153,7 +153,7 @@ func _set_character_body_data(_body_data: CharacterBodyData) -> void:
 	
 	if body_data != EMPEROR:
 		health = body_data.max_health + body_data.max_health * Util.main.level.waves_passed * 0.05
-		print("Spawned with %s health" % health)
+		#print("Spawned with %s health" % health)
 	else:
 		health = body_data.max_health
 	
@@ -165,6 +165,7 @@ func _set_character_body_data(_body_data: CharacterBodyData) -> void:
 	if body_data.body_type == CharacterBodyData.BodyType.FLYING:
 		ride_height = 4.0
 		$NavCollider/SpringRay.target_position.y = -6.0
+		spring_ray.collision_mask = 2048
 
 func get_eye_target() -> Node3D:
 	return body.get_eye_target()

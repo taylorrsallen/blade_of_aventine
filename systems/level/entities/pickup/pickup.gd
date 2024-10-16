@@ -22,6 +22,8 @@ var suction_target: Node3D
 var time_until_suction: float = 0.2
 var time_until_suction_timer: float
 
+var landing_height: float
+
 # (({[%%%(({[=======================================================================================================================]}))%%%]}))
 func _set_pickup_data(_pickup_data: PickupData) -> void:
 	pickup_data = _pickup_data
@@ -33,6 +35,7 @@ func _set_pickup_data(_pickup_data: PickupData) -> void:
 func _ready() -> void:
 	direction = Vector3(randf() - 0.5, 0.0, randf() - 0.5).normalized()
 	rotation_speed = Vector3((randf() - 0.5) * 40.0, (randf() - 0.5) * 40.0, (randf() - 0.5) * 40.0)
+	landing_height = Util.main.level.get_placement_height_at_global_coord(global_position + direction * distance)
 	if pickup_data && pickup_data.spawn_sounds:
 		var sound: SoundReferenceData = pickup_data.spawn_sounds.pool.pick_random()
 		SoundManager.play_pitched_3d_sfx(sound.id, sound.type, global_position, 0.9, 1.1, sound.volume_db)
@@ -73,7 +76,7 @@ func _physics_process(delta: float) -> void:
 	elif lifetime_timer < time_to_grounded:
 		var anim_percent: float = lifetime_timer / time_to_grounded
 		$Body.position = direction * distance * anim_percent
-		$Body.position.y = drop_curve.sample(anim_percent) * 2.0
+		$Body.position.y = drop_curve.sample(anim_percent) * 2.0 + lerpf(global_position.y, landing_height - global_position.y, anim_percent)
 		$Body.rotate_x(delta * rotation_speed.x)
 		$Body.rotate_y(delta * rotation_speed.y)
 		$Body.rotate_z(delta * rotation_speed.z)

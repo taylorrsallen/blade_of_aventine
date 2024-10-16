@@ -116,8 +116,8 @@ func _update_movement(delta: float) -> void:
 		if is_instance_valid(target_bread_pile):
 			if Vector3(character.global_position.x, 0.0, character.global_position.z).distance_to(Vector3(target_bread_pile.global_position.x, 0.0, target_bread_pile.global_position.z)) < 1.0:
 				if character.body_data.body_type == CharacterBodyData.BodyType.FLYING:
-					character.ride_height = 2.0
-					character.spring_ray.target_position.y = -3.0
+					character.ride_height = 1.0
+					character.spring_ray.target_position.y = -2.0
 				if !fed:
 					var bread_to_eat: GrabbableBread = target_bread_pile.take_bread()
 					if is_instance_valid(bread_to_eat):

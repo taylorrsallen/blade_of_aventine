@@ -506,6 +506,7 @@ func spawn_entity_from_color(color: Color, local_coord: Vector2i) -> void:
 	if color.r8 > 179 && color.r8 < 200:
 		var gateway: GatewayBase = GATEWAY_BASE.instantiate()
 		gateway.position = global_coord
+		gateway.position.y = 0.0
 		gateway.data = GatewayData.new()
 		gateway.data.destination_level_id = color.r8 - 179
 		add_tile_entity(gateway)
@@ -584,16 +585,11 @@ func spawn_building_from_color(color: Color, local_coord: Vector2i) -> void:
 		
 		add_building(assembler)
 	
-	print("Found building id [%s]:" % building_id)
-	
 	if color.r8 == 1:
-		print("     Setting building start")
 		assembler.global_position = global_coord_from_local_coord(local_coord)
 	elif color.r8 == 2:
-		print("     Setting building end")
 		assembler.end_position = global_coord_from_local_coord(local_coord)
 	elif color.r8 > 2 && color.r8 < 7:
-		print("     Setting building orientation to %s" % (color.r8 - 3))
 		assembler.building_orientation = color.r8 - 3
 
 # (({[%%%(({[=======================================================================================================================]}))%%%]}))

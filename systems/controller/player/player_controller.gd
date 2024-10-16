@@ -28,7 +28,7 @@ const HUD_GUI: PackedScene = preload("res://systems/gui/hud/hud.scn")
 const START_MENU: PackedScene = preload("res://systems/gui/menus/start_menu.scn")
 
 const AS: PickupData = preload("res://resources/pickups/coins/as.res")
-const PICKUP: PackedScene = preload("res://systems/level/entities/pickup/pickup.scn")
+var PICKUP: PackedScene = load("res://systems/level/entities/pickup/pickup.scn")
 
 # (({[%%%(({[=======================================================================================================================]}))%%%]}))
 ## COMPOSITION
@@ -261,7 +261,7 @@ func _update_money_feed_target(delta: float) -> void:
 				if money_feed_target.level == money_feed_target.type_data.level_blueprints.size() - 1:
 					money_feed_target = null
 					return
-				money_feed_target.add_experience(0.5)
+				money_feed_target.add_experience(0.9)
 				money_feed_target.money_fed += 1.0
 			game_resources.coins -= 1
 			var pickup: Pickup = PICKUP.instantiate()
@@ -372,8 +372,8 @@ func _secondary() -> void:
 			entity_to_throw.collider_that_threw_me = character
 			return
 	elif character.try_attack():
-		var check_for_characters_global_coord: Vector3 = character.global_position - character.body_container.global_basis.z * 0.5
-		var other_characters: Array[PhysicsBody3D] = AreaQueryManager.query_area(check_for_characters_global_coord, 1.5, 2, [character])
+		var check_for_characters_global_coord: Vector3 = character.global_position - character.body_container.global_basis.z * 0.5 + Vector3.UP * character.body_data.height * 0.5
+		var other_characters: Array[PhysicsBody3D] = AreaQueryManager.query_area(check_for_characters_global_coord, 0.8, 2, [character])
 		
 		var closest_character: Character = null
 		var closest_distance: float = 100.0
@@ -602,14 +602,21 @@ func set_camera_rig(_camera_rig: CameraRig) -> void:
 
 func spawn_camera_rig() -> void:
 	splitscreen_view = SPLITSCREEN_VIEW_SCN.instantiate()
+	
+	# TOGGLE
 	camera_view_layer.add_child(splitscreen_view)
 	
 	shader_view = SHADER_VIEW_SCN.instantiate()
 	shader_view_layer.add_child(shader_view)
 	
 	camera_rig = CAMERA_RIG.instantiate()
+	
+	# TOGGLE
 	splitscreen_view.sub_viewport.add_child(camera_rig)
+	
+	# TOGGLE
 	#camera_view_layer.add_child(camera_rig)
+	
 	_init_camera_rig()
 	
 	if is_instance_valid(hud): hud.queue_free()

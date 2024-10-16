@@ -44,12 +44,12 @@ func assemble() -> void:
 		if z == 0:
 			if x == 0:
 				## FRONT LEFT CORNER
-				Util.main.level.set_terrain_tile_at_global_coord(corner_terrain_id, global_coord, 0)
+				Util.main.level.set_terrain_tile_at_global_coord(corner_terrain_id, global_coord, 1)
 				_place_wall_corner(tile_set, global_coord, decoration_wall_height, 1)
 				_place_roof_corner(tile_set, global_coord, decoration_roof_height, 1)
 			elif x == building_dims.x - 1:
 				## FRONT RIGHT CORNER
-				Util.main.level.set_terrain_tile_at_global_coord(corner_terrain_id, global_coord, 0)
+				Util.main.level.set_terrain_tile_at_global_coord(corner_terrain_id, global_coord, 2)
 				_place_wall_corner(tile_set, global_coord, decoration_wall_height, 2)
 				_place_roof_corner(tile_set, global_coord, decoration_roof_height, 2)
 			else:
@@ -59,7 +59,7 @@ func assemble() -> void:
 		elif z == building_dims.y - 1:
 			if x == 0:
 				## BACK LEFT CORNER
-				Util.main.level.set_terrain_tile_at_global_coord(corner_terrain_id, global_coord, 0)
+				Util.main.level.set_terrain_tile_at_global_coord(corner_terrain_id, global_coord, 3)
 				_place_wall_corner(tile_set, global_coord, decoration_wall_height, 3)
 				_place_roof_corner(tile_set, global_coord, decoration_roof_height, 3)
 			elif x == building_dims.x - 1:
@@ -177,10 +177,22 @@ func _place_roof_corner(tile_set: BuildingTileSetData, global_coord: Vector3, he
 	Util.main.level.set_decoration_tile_at_global_coord(roof_border_end_01, global_coord + roof_border_end_01_offset, height, roof_orientation)
 
 func _place_wall(tile_set: BuildingTileSetData, parallel_axis_value: int, global_coord: Vector3, height: int, orientation: int) -> void:
-	if parallel_axis_value % 2 == 1:
-		Util.main.level.set_decoration_tile_at_global_coord(tile_set.roof_border_wall_00, global_coord, height, orientation)
+	if building_tile_set == TileSetType.INSULAE:
+		if orientation == 0 || orientation == 3:
+			if parallel_axis_value % 2 == 0:
+				Util.main.level.set_decoration_tile_at_global_coord(tile_set.roof_border_wall_00, global_coord, height, orientation)
+			else:
+				Util.main.level.set_decoration_tile_at_global_coord(tile_set.roof_border_wall_01, global_coord, height, orientation)
+		else:
+			if parallel_axis_value % 2 == 1:
+				Util.main.level.set_decoration_tile_at_global_coord(tile_set.roof_border_wall_00, global_coord, height, orientation)
+			else:
+				Util.main.level.set_decoration_tile_at_global_coord(tile_set.roof_border_wall_01, global_coord, height, orientation)
 	else:
-		Util.main.level.set_decoration_tile_at_global_coord(tile_set.roof_border_wall_01, global_coord, height, orientation)
+		if parallel_axis_value % 2 == 1:
+			Util.main.level.set_decoration_tile_at_global_coord(tile_set.roof_border_wall_00, global_coord, height, orientation)
+		else:
+			Util.main.level.set_decoration_tile_at_global_coord(tile_set.roof_border_wall_01, global_coord, height, orientation)
 
 func _place_wall_roof(tile_set: BuildingTileSetData, parallel_axis_index: int, local_coord: Vector2i, global_coord: Vector3, height: int, orientation: int) -> void:
 	var roof_offset: Vector3 = Vector3.ZERO
