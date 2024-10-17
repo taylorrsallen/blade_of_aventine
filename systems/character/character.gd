@@ -110,6 +110,10 @@ var readied: bool
 
 var unstuck_speed_mod: float
 
+# Last second hacks
+var max_health: float
+@onready var health_bar: MeshInstance3D = $HealthBar
+
 # (({[%%%(({[=======================================================================================================================]}))%%%]}))
 func is_flag_on(flag: CharacterFlag) -> bool: return Util.is_flag_on(flags, flag)
 func set_flag_on(flag: CharacterFlag) -> void: flags = Util.set_flag_on(flags, flag)
@@ -152,10 +156,11 @@ func _set_character_body_data(_body_data: CharacterBodyData) -> void:
 	body.data = body_data
 	
 	if body_data != EMPEROR:
-		health = body_data.max_health + body_data.max_health * Util.main.level.waves_passed * 0.05
+		max_health = body_data.max_health + body_data.max_health * Util.main.level.waves_passed * 0.05
 		#print("Spawned with %s health" % health)
 	else:
-		health = body_data.max_health
+		max_health = body_data.max_health
+	health = max_health
 	
 	$NavCollider.shape.radius = body_data.radius
 	$DamageableArea3D/CollisionShape3D.shape.radius = body_data.radius
@@ -166,6 +171,8 @@ func _set_character_body_data(_body_data: CharacterBodyData) -> void:
 		ride_height = 4.0
 		$NavCollider/SpringRay.target_position.y = -6.0
 		spring_ray.collision_mask = 2048
+		
+	health_bar.position.y = body_data.height + 0.2
 
 func get_eye_target() -> Node3D:
 	return body.get_eye_target()
@@ -187,6 +194,13 @@ func _physics_process(delta: float) -> void:
 	attack_timer = min(attack_timer + delta, body_data.attack_rate)
 	effective_velocity = global_position - previous_position
 	previous_position = global_position
+	
+	health = min(health + body_data.health_regen * delta, max_health)
+	if health >= max_health:
+		health_bar.hide()
+	else:
+		health_bar.show()
+		health_bar.mesh.size.x = health / max_health
 	
 	if grabbed_entity:
 		if !is_instance_valid(grabbed_entity): drop_grabbed_entity()
@@ -407,7 +421,12 @@ func damage(damage_data: DamageData, source: Node) -> void:
 	if damage_data.damage_type == DamageData.DamageType.ELEMENTAL:
 		health -= damage_data.damage_strength
 	else:
-		health -= clampf(damage_data.damage_strength - body_data.flat_armor, 0.0, 999.9)
+		var damagee: float = damage_data.damage_strength
+		if damage_data.damage_type == DamageData.DamageType.SHARP:
+			damagee = max(damagee - body_data.flat_armor * 1.5, 0.0)
+		if damage_data.damage_type == DamageData.DamageType.BLUNT:
+			damagee = max(damagee - body_data.flat_armor * 0.5, 0.0)
+		health -= damagee
 	
 	if health <= 0.0:
 		set_flag_on(CharacterFlag.DEAD)

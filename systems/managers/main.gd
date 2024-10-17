@@ -17,6 +17,8 @@ var spawn_point: Vector3 = Vector3.ZERO
 var extra_spawn_points: Array[Vector3] = [Vector3.ZERO, Vector3.ZERO, Vector3.ZERO]
 var game_progress_data: GameProgressData
 
+@onready var orcus_clouds_volume: CloudsVolume = $OrcusCloudsVolume
+
 # (({[%%%(({[=======================================================================================================================]}))%%%]}))
 func _ready() -> void:
 	_load_game_progress_data()

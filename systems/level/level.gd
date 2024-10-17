@@ -3,8 +3,8 @@ class_name Level extends Node3D
 # (({[%%%(({[=======================================================================================================================]}))%%%]}))
 signal wave_progress_changed(progress: float)
 signal active_wave_icons_changed(icons: Array[Texture2D])
-signal incoming_wave_icons_changed(icons: Array[Texture2D])
-signal next_wave_icons_changed(icons: Array[Texture2D])
+signal incoming_wave_icons_changed(icons: Array[Texture2D], spawner_ids: Array[int])
+signal next_wave_icons_changed(icons: Array[Texture2D], spawner_ids: Array[int])
 
 signal level_beaten(level_id: int)
 
@@ -131,8 +131,11 @@ func _level_complete() -> void:
 # (({[%%%(({[=======================================================================================================================]}))%%%]}))
 func _start_new_wave() -> void:
 	var active_wave_icons: Array[Texture2D] = []
+	#var active_wave_spawner_ids: Array[int] = []
 	var incoming_wave_icons: Array[Texture2D] = []
+	var incoming_wave_spawner_ids: Array[int] = []
 	var next_wave_icons: Array[Texture2D] = []
+	var next_wave_spawner_ids: Array[int] = []
 	
 	if waves_started:
 		active_wave = waves.pop_front()
@@ -145,7 +148,13 @@ func _start_new_wave() -> void:
 		for batch in active_wave.batches:
 			if !faction_spawners_array[batch.faction_id]: continue
 			if faction_spawners_array[batch.faction_id].spawners.is_empty(): continue
-			var spawner: UnitSpawner = faction_spawners_array[batch.faction_id].spawners.pick_random()
+			
+			var spawner: UnitSpawner = null
+			for potential_spawner in faction_spawners_array[batch.faction_id].spawners:
+				if potential_spawner.id == batch.spawner_id:
+					spawner = potential_spawner
+					break
+			
 			if !is_instance_valid(spawner): continue
 			active_wave_icons.append(FACTION_DATABASE.database[batch.faction_id].units[batch.unit_id].icon)
 			spawner.spawn_batch(batch)
@@ -155,16 +164,18 @@ func _start_new_wave() -> void:
 			if !faction_spawners_array[batch.faction_id]: continue
 			if faction_spawners_array[batch.faction_id].spawners.is_empty(): continue
 			incoming_wave_icons.append(FACTION_DATABASE.database[batch.faction_id].units[batch.unit_id].icon)
+			incoming_wave_spawner_ids.append(batch.spawner_id)
 		
 		if waves.size() > 1:
 			for batch in waves[1].batches:
 				if !faction_spawners_array[batch.faction_id]: continue
 				if faction_spawners_array[batch.faction_id].spawners.is_empty(): continue
 				next_wave_icons.append(FACTION_DATABASE.database[batch.faction_id].units[batch.unit_id].icon)
+				next_wave_spawner_ids.append(batch.spawner_id)
 	
 	active_wave_icons_changed.emit(active_wave_icons)
-	incoming_wave_icons_changed.emit(incoming_wave_icons)
-	next_wave_icons_changed.emit(next_wave_icons)
+	incoming_wave_icons_changed.emit(incoming_wave_icons, incoming_wave_spawner_ids)
+	next_wave_icons_changed.emit(next_wave_icons, next_wave_spawner_ids)
 
 # (({[%%%(({[=======================================================================================================================]}))%%%]}))
 func add_ai(faction_id: int, ai: Node) -> void:
@@ -341,6 +352,9 @@ func _get_all_neighbor_indices(i: int) -> Array[int]:
 
 # (({[%%%(({[=======================================================================================================================]}))%%%]}))
 func unload() -> void:
+	# HACK ALERT
+	if Util.main && Util.main.orcus_clouds_volume: Util.main.orcus_clouds_volume.hide()
+	
 	for i in SoundManager.BackgroundTrackLayer.MUSIC_2: SoundManager.erase_background_track(i)
 	
 	waves_passed = 0
@@ -350,12 +364,6 @@ func unload() -> void:
 	terrain_tiles.clear()
 	terrain_tiles.resize(level_dim * level_dim)
 	building_tiles.clear()
-	
-	wave_progress_changed.emit(0.0)
-	var empty_icons: Array[Texture2D] = []
-	active_wave_icons_changed.emit(empty_icons)
-	incoming_wave_icons_changed.emit(empty_icons)
-	next_wave_icons_changed.emit(empty_icons)
 	
 	player_flow_fields.clear()
 	player_flow_fields.resize(4)
@@ -397,6 +405,7 @@ func unload() -> void:
 func load_from_level_id(level_id: int) -> void:
 	_load_from_data(LEVEL_DATABASE.database[level_id])
 	data_id = level_id
+	if level_id == 1: Util.main.orcus_clouds_volume.show()
 
 func _load_from_data(level_data: LevelData) -> void:
 	loading = true
@@ -483,11 +492,11 @@ func spawn_entity_from_color(color: Color, local_coord: Vector2i) -> void:
 	var global_coord: Vector3 = centered_global_coord_from_local_coord(local_coord)
 	global_coord.y = get_placement_height_at_global_coord(global_coord)
 	match color.r8:
-		120: faction_base_id = 0
-		130: faction_base_id = 1
-		140: faction_base_id = 2
-		150: faction_base_id = 3
-		160: faction_base_id = 4
+		#120: faction_base_id = 0
+		#130: faction_base_id = 1
+		#140: faction_base_id = 2
+		#150: faction_base_id = 3
+		#160: faction_base_id = 4
 		200: player_spawn_local_coord = local_coord
 		201: extra_player_spawn_local_coords[0] = local_coord
 		202: extra_player_spawn_local_coords[1] = local_coord
@@ -498,6 +507,11 @@ func spawn_entity_from_color(color: Color, local_coord: Vector2i) -> void:
 			#tower.position = global_coord + Vector3(0.5, -5.0, 0.5)
 			#tower.protect_position = true
 			#add_tile_entity(tower)
+	
+	if color.r8 > 119 && color.r8 < 130: faction_base_id = 0
+	if color.r8 > 129 && color.r8 < 140: faction_base_id = 1
+	
+	#if color.r8
 	
 	if color.r8 > 29 && color.r8 < 45: _spawn_block_pile_from_color(color, global_coord)
 	if color.r8 > 210 && color.r8 < 250: _spawn_special_npc_from_color(color, global_coord)
@@ -516,11 +530,11 @@ func spawn_entity_from_color(color: Color, local_coord: Vector2i) -> void:
 		shop_base.data = SHOP_DATABASE.database[color.r8 - 170]
 		shop_base.position = global_coord
 		if color.b8 > 252:
-			print(90.0 * (color.b8 - 252))
 			shop_base.rotate_y(deg_to_rad(90.0 * (color.b8 - 252)))
 		add_tile_entity(shop_base)
 	
 	if faction_base_id != -1:
+		
 		faction_base_local_coords[faction_base_id] = local_coord
 		if !factions_in_level.has(faction_base_id): factions_in_level.append(faction_base_id)
 		
@@ -529,14 +543,23 @@ func spawn_entity_from_color(color: Color, local_coord: Vector2i) -> void:
 		spawner.position.y = get_placement_height_at_global_coord(global_coord) + 0.5
 		if !faction_spawners_array[faction_base_id]: faction_spawners_array[faction_base_id] = FactionSpawners.new()
 		faction_spawners_array[faction_base_id].spawners.append(spawner)
+		spawner.id = color.r8 - 130
 		add_child(spawner)
+		if color.b8 > 252:
+			spawner.gate_rotation.rotate_y(deg_to_rad(90.0 * (color.b8 - 252)))
+		if faction_base_id == 0:
+			spawner.hide()
+			spawner.disable_collision()
 	
 	if color.b8 < 128 || color.b8 > 252: return
 	var harvestable_id: int = color.b8 - 128
 	var harvestable: HarvestableBase = HARVESTABLE_BASE.instantiate()
 	harvestable.data = HARVESTABLE_DATABASE.database[harvestable_id]
 	harvestable.position = global_coord
-	harvestable.rotate_y(randf() * 3.14)
+	if harvestable.data.random_rotation:
+		harvestable.rotate_y(randf() * 3.14)
+	elif color.r8 > 2 && color.r8 < 7:
+		harvestable.rotate_y(deg_to_rad(90.0 * (color.r8 - 3)))
 	add_tile_entity(harvestable)
 
 func _spawn_block_pile_from_color(color: Color, global_coord: Vector3) -> void:

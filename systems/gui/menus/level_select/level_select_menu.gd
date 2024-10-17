@@ -7,7 +7,7 @@ const LEVEL: PackedScene = preload("res://systems/level/level.scn")
 var LEVEL_DATABASE: LevelDatabase = load("res://resources/levels/level_database.res")
 
 # (({[%%%(({[=======================================================================================================================]}))%%%]}))
-@onready var levels_h_box_container: HBoxContainer = $LevelsHBoxContainer
+@onready var levels_h_box_container: VBoxContainer = $CanvasLayer/Control/LevelsHBoxContainer
 
 # (({[%%%(({[=======================================================================================================================]}))%%%]}))
 func _ready() -> void:

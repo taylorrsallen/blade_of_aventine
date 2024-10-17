@@ -6,6 +6,7 @@ class_name HarvestableData extends Resource
 @export var model_scene: PackedScene
 @export var height: float
 @export var radius: float
+@export var random_rotation: bool
 
 @export_category("Drops")
 @export var block_drops: Array[BlockData] = []

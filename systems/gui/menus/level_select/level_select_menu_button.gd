@@ -1,4 +1,4 @@
-class_name LevelSelectMenuButton extends Button
+class_name LevelSelectMenuButton extends TextureButtonWithText
 
 # (({[%%%(({[=======================================================================================================================]}))%%%]}))
 signal selected(level_id: int)

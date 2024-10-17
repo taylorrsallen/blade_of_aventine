@@ -2,7 +2,8 @@ class_name TowerPitchPivotModel extends Node3D
 
 # (({[%%%(({[=======================================================================================================================]}))%%%]}))
 @export var projectile_emitter: Node3D
-@onready var animation_tree: AnimationTree = $AnimationTree
+@export var no_rotation: bool
+var animation_tree: AnimationTree
 
 var fire_step: int
 var fire_speed_multiplier: float = 20.0
@@ -12,8 +13,10 @@ var step_time_cd: float = 0.1
 
 # (({[%%%(({[=======================================================================================================================]}))%%%]}))
 func _physics_process(delta: float) -> void:
-	animation_tree["parameters/reload_step/seek_request"] = floorf(get_truncated_reload_percent() * 7.0) * CharacterAnimationTypeData.STEP_FACTOR
-	advance_step(delta)
+	animation_tree = get_node_or_null("AnimationTree")
+	if animation_tree:
+		animation_tree["parameters/reload_step/seek_request"] = floorf(get_truncated_reload_percent() * 7.0) * CharacterAnimationTypeData.STEP_FACTOR
+		advance_step(delta)
 
 # (({[%%%(({[=======================================================================================================================]}))%%%]}))
 func advance_step(delta: float) -> void:
@@ -31,7 +34,7 @@ func advance_step(delta: float) -> void:
 # (({[%%%(({[=======================================================================================================================]}))%%%]}))
 ## One time animations
 func fire() -> void:
-	animation_tree["parameters/reload_blend/blend_amount"] = 0.0
+	if animation_tree: animation_tree["parameters/reload_blend/blend_amount"] = 0.0
 	fire_step = 0
 
 # (({[%%%(({[=======================================================================================================================]}))%%%]}))

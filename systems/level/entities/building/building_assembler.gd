@@ -112,6 +112,8 @@ func _place_interior_ceiling(tile_set: BuildingTileSetData, local_coord: Vector2
 			if building_orientation == 1 || building_orientation == 2:
 				if local_coord.x % 4 != 0:
 					Util.main.level.set_decoration_tile_at_global_coord(tile_set.ceiling_border, global_coord, wall_height, 1)
+				else:
+					Util.main.level.set_decoration_tile_at_global_coord(tile_set.ceiling_low_border, global_coord, wall_height, 2)
 			else:
 				Util.main.level.set_decoration_tile_at_global_coord(tile_set.ceiling_border, global_coord, wall_height, 1)
 	elif local_coord.x == building_dims.x - 2:
@@ -125,7 +127,11 @@ func _place_interior_ceiling(tile_set: BuildingTileSetData, local_coord: Vector2
 		if local_coord.x % 4 == 0:
 			Util.main.level.set_decoration_tile_at_global_coord(tile_set.ceiling_low_border, global_coord, wall_height, 3)
 		else:
-			Util.main.level.set_decoration_tile_at_global_coord(tile_set.ceiling_border, global_coord, wall_height, 0)
+			if building_orientation == 1 || building_orientation == 2:
+				if local_coord.x % 4 != 0:
+					Util.main.level.set_decoration_tile_at_global_coord(tile_set.ceiling_border, global_coord, wall_height, 0)
+			else:
+				Util.main.level.set_decoration_tile_at_global_coord(tile_set.ceiling_border, global_coord, wall_height, 0)
 	else:
 		if ceiling_variation_value % 4 == 0:
 			Util.main.level.set_decoration_tile_at_global_coord(tile_set.ceiling_low, global_coord, wall_height, 2)

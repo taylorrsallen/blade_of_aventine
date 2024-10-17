@@ -4,11 +4,12 @@ class_name StartMenu extends MenuBase
 const MAIN_MENU: PackedScene = preload("res://systems/gui/menus/main_menu.scn")
 const LEVEL_SELECT: PackedScene = preload("res://systems/gui/menus/level_select/level_select_menu.scn")
 const START_MENU: PackedScene = preload("res://systems/gui/menus/start_menu.scn")
+var SETTINGS_MENU: PackedScene = load("res://systems/gui/menus/settings/settings_menu.scn")
 var PLAYERS_MENU: PackedScene = load("res://systems/gui/menus/players/players_menu.scn")
 
 # (({[%%%(({[=======================================================================================================================]}))%%%]}))
 @onready var start_panel_container: PanelContainer = $StartPanelContainer
-@onready var clear_user_data_confirmation: PanelContainer = $ClearUserDataConfirmation
+@onready var clear_user_data_confirmation: PanelContainer = $StartPanelContainer/MarginContainer/CanvasLayer/ClearUserDataConfirmation
 
 @onready var orcus: TextureButtonWithText = $StartPanelContainer/MarginContainer/CanvasLayer/Buttons/ButtonVBoxContainer/Orcus
 @onready var fake_button_box: Control = $StartPanelContainer/MarginContainer/FakeButtonBox
@@ -40,7 +41,9 @@ func _on_players_pressed() -> void:
 	queue_free()
 
 func _on_settings_pressed() -> void:
-	pass # Replace with function body.
+	var settings: SettingsMenu = SETTINGS_MENU.instantiate()
+	Util.player.menu_view.add_child(settings)
+	queue_free()
 
 func _on_orcus_pressed() -> void:
 	Util.main.level.load_from_level_id(1)

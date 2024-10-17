@@ -11,7 +11,7 @@ class_name Pickup extends Node3D
 
 var blink_cd: float = 0.25
 var blink_timer: float
-@export var despawn_cd: float = 20.0
+@export var despawn_cd: float = 30.0
 var lifetime_timer: float
 
 var suction_speed: float

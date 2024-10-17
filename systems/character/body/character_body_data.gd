@@ -38,6 +38,7 @@ enum BodyType {
 
 @export_category("Defence")
 @export var max_health: float
+@export var health_regen: float
 @export var flat_armor: float
 @export var percent_armor: float
 

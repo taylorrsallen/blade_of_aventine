@@ -137,7 +137,7 @@ func _physics_process(delta: float) -> void:
 		target_aim_point = _get_aim_point()
 		yaw_pivot.face_point(target_aim_point, delta * type_data.level_blueprints[level].move_speed_multiplier)
 		
-		if is_instance_valid(pitch_pivot):
+		if is_instance_valid(pitch_pivot) && !pitch_pivot_model.no_rotation:
 			pitch_pivot.face_point(target_aim_point, delta * type_data.level_blueprints[level].move_speed_multiplier)
 			if yaw_pivot.is_facing_point(target_aim_point) && pitch_pivot.is_facing_point(target_aim_point):
 				_fire_projectile()
@@ -162,11 +162,14 @@ func _fire_projectile() -> void:
 	
 	arrow.position = pitch_pivot_model.projectile_emitter.global_position
 	arrow.basis = pitch_pivot_model.projectile_emitter.global_basis
+	
 	arrow.direction = -pitch_pivot_model.projectile_emitter.global_basis.z
+	
 	arrow.flat_direction = target_aim_point - global_position
 	arrow.flat_direction.y = 0.0
 	arrow.flat_direction = arrow.flat_direction.normalized()
-	arrow.start_distance = Vector3(global_position.x, 0.0, global_position.z).distance_to(Vector3(target_aim_point.x, 0.0, target_aim_point.z))
+	
+	arrow.start_distance = Vector3(pitch_pivot_model.projectile_emitter.global_position.x, 0.0, pitch_pivot_model.projectile_emitter.global_position.z).distance_to(Vector3(target_aim_point.x, 0.0, target_aim_point.z))
 	arrow.source = self
 	Util.main.level.add_child(arrow)
 
@@ -521,6 +524,7 @@ func _get_aim_point() -> Vector3:
 	var t: float = min(t1, t2)
 	if t < 0.0: t = max(t1, t2)
 	if t < 0.0: return Vector3.INF
+	
 	return vt * t + pti
 
 # (({[%%%(({[=======================================================================================================================]}))%%%]}))

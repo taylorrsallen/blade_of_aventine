@@ -8,3 +8,4 @@ class_name LevelWaveBatchData extends Resource
 @export var target_faction_id: int
 @export var faction_id: int
 @export var unit_id: int
+@export var spawner_id: int

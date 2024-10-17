@@ -152,17 +152,17 @@ func _physics_process(delta: float) -> void:
 					child.go_back()
 	
 	if is_instance_valid(camera_rig):
-		const ZOOM_BOUNDS: Vector2 = Vector2(0.5, 15.0)
+		const ZOOM_BOUNDS: Vector2 = Vector2(0.5, 25.0)
 		if local_id == 0:
 			if Input.is_action_just_released("zoom_in_" + str(local_id)):
-				camera_rig.zoom = clampf(camera_rig.zoom - 0.5, ZOOM_BOUNDS.x, ZOOM_BOUNDS.y)
+				camera_rig.zoom = clampf(camera_rig.zoom - 1.0, ZOOM_BOUNDS.x, ZOOM_BOUNDS.y)
 			elif Input.is_action_just_released("zoom_out_" + str(local_id)):
-				camera_rig.zoom = clampf(camera_rig.zoom + 0.5, ZOOM_BOUNDS.x, ZOOM_BOUNDS.y)
+				camera_rig.zoom = clampf(camera_rig.zoom + 1.0, ZOOM_BOUNDS.x, ZOOM_BOUNDS.y)
 		else:
 			if Input.is_action_pressed("zoom_in_" + str(local_id)):
-				camera_rig.zoom = clampf(camera_rig.zoom - 3.0 * delta, ZOOM_BOUNDS.x, ZOOM_BOUNDS.y)
+				camera_rig.zoom = clampf(camera_rig.zoom - 5.0 * delta, ZOOM_BOUNDS.x, ZOOM_BOUNDS.y)
 			elif Input.is_action_pressed("zoom_out_" + str(local_id)):
-				camera_rig.zoom = clampf(camera_rig.zoom + 3.0 * delta, ZOOM_BOUNDS.x, ZOOM_BOUNDS.y)
+				camera_rig.zoom = clampf(camera_rig.zoom + 5.0 * delta, ZOOM_BOUNDS.x, ZOOM_BOUNDS.y)
 		
 		if !is_flag_on(PlayerControllerFlag.CURSOR_VISIBLE):
 			var look_movement: Vector2 = Vector2.ZERO
@@ -621,10 +621,6 @@ func spawn_camera_rig() -> void:
 	
 	if is_instance_valid(hud): hud.queue_free()
 	hud = HUD_GUI.instantiate()
-	Util.main.level.wave_progress_changed.connect(hud._on_wave_progress_changed)
-	Util.main.level.active_wave_icons_changed.connect(hud._on_active_wave_icons_changed)
-	Util.main.level.incoming_wave_icons_changed.connect(hud._on_incoming_wave_icons_changed)
-	Util.main.level.next_wave_icons_changed.connect(hud._on_next_wave_icons_changed)
 	hud_view.add_child(hud)
 
 # (({[%%%(({[=======================================================================================================================]}))%%%]}))

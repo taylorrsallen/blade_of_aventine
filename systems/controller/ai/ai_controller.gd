@@ -105,12 +105,16 @@ func _update_movement(delta: float) -> void:
 			return
 	
 	if is_instance_valid(character.grabbed_entity):
-		flow_vector = Util.main.level.faction_flow_fields[faction_id][level_local_coord.y * Util.main.level.level_dim + level_local_coord.x]
+		var flow_vector_index: int = level_local_coord.y * Util.main.level.level_dim + level_local_coord.x
+		if flow_vector_index >= Util.main.level.level_dim * Util.main.level.level_dim: return
+		flow_vector = Util.main.level.faction_flow_fields[faction_id][flow_vector_index]
 		if character.global_position.distance_to(Util.main.level.centered_global_coord_from_local_coord(Util.main.level.faction_base_local_coords[faction_id])) < 1.0:
 			EventBus.bread_lost.emit()
 			queue_free()
 	else:
-		flow_vector = Util.main.level.faction_flow_fields[target_faction_id][level_local_coord.y * Util.main.level.level_dim + level_local_coord.x]
+		var flow_vector_index: int = level_local_coord.y * Util.main.level.level_dim + level_local_coord.x
+		if flow_vector_index >= Util.main.level.level_dim * Util.main.level.level_dim: return
+		flow_vector = Util.main.level.faction_flow_fields[target_faction_id][flow_vector_index]
 		
 		var target_bread_pile: BreadPile = Util.main.level.faction_bread_piles[target_faction_id]
 		if is_instance_valid(target_bread_pile):
